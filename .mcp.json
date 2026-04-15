@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp"],
+      "env": {
+        "FIGMA_ACCESS_TOKEN": "figd_9Iv4SCSpWh5HmKptBHqz6g2h8zK0QTXWzkGHdDV1"
+      }
+    },
+    "wpcom-mcp": {
+      "url": "https://public-api.wordpress.com/wpcom/v2/mcp/v1"
+    }
+  }
+}

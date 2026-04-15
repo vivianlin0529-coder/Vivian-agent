@@ -1,0 +1,10 @@
+{
+  "sites": [
+    {
+      "name": "my-wp-site",
+      "url": "https://FILL_IN_YOUR_WP_URL",
+      "username": "FILL_IN_USERNAME",
+      "password": "FILL_IN_APP_PASSWORD"
+    }
+  ]
+}

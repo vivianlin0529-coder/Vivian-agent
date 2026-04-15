@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { background: #111; }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px 20px 20px 300px;
+      min-height: 100vh;
+      background: #111;
+      font-family: 'Noto Sans TC', 'Inter', system-ui, sans-serif;
+    }
+
+    /* 畫布外框 */
+    #canvas-wrap {
+      transform-origin: top left;
+      flex-shrink: 0;
+    }
+
+    .container {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bg-photo {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.2);
+    }
+
+    /* 可拖移的文字卡片 */
+    #text-card {
+      position: absolute;
+      bottom: 80px;
+      right: 100px;
+      width: 720px;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-left: 4px solid #00d4ff;
+      padding: 48px 52px;
+      cursor: grab;
+      user-select: none;
+      border-radius: 2px;
+    }
+
+    #text-card:active { cursor: grabbing; }
+    #text-card.no-hint .drag-hint { display: none !important; }
+
+    .drag-hint {
+      position: absolute;
+      top: 12px; right: 16px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.3);
+      pointer-events: none;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .tag-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+    .tag-line { width: 36px; height: 3px; background: #00d4ff; border-radius: 2px; flex-shrink: 0; }
+    .tag-label { font-size: 16px; font-weight: 600; color: #00d4ff; letter-spacing: 0.2em; text-transform: uppercase; }
+
+    .title {
+      font-size: 52px; font-weight: 700; color: #ffffff;
+      line-height: 1.3; word-break: break-word; margin-bottom: 28px;
+    }
+
+    .divider {
+      width: 60px; height: 2px;
+      background: linear-gradient(90deg, #00d4ff, #7b61ff);
+      border-radius: 2px; margin-bottom: 24px;
+    }
+
+    .summary {
+      font-size: 22px; font-weight: 400;
+      color: rgba(255,255,255,0.82);
+      line-height: 1.85; word-break: break-word;
+    }
+
+    .date-badge {
+      position: absolute;
+      bottom: 32px; right: 52px;
+      font-size: 16px; color: rgba(255,255,255,0.4);
+      letter-spacing: 0.12em;
+      font-family: 'Inter', monospace;
+    }
+
+    /* ── 控制面板 ── */
+    #control-panel {
+      position: fixed;
+      top: 0; left: 0;
+      width: 280px;
+      height: 100vh;
+      overflow-y: auto;
+      background: rgba(10,14,26,0.96);
+      border-right: 1px solid rgba(0,212,255,0.25);
+      padding: 20px 18px;
+      z-index: 9999;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: #b8c5d6;
+    }
+
+    #control-panel h3 {
+      color: #00d4ff;
+      font-size: 13px;
+      margin: 16px 0 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(0,212,255,0.2);
+    }
+
+    #control-panel h3:first-child { margin-top: 0; }
+
+    .ctrl-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 6px;
+    }
+
+    .ctrl-row label { font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+
+    .ctrl-row input[type=range] {
+      flex: 1; min-width: 0;
+      accent-color: #00d4ff;
+    }
+
+    .ctrl-val {
+      width: 38px; text-align: right;
+      font-size: 12px; color: #00d4ff; flex-shrink: 0;
+    }
+
+    select.ctrl-select {
+      width: 100%;
+      background: #1a2030;
+      color: #b8c5d6;
+      border: 1px solid rgba(0,212,255,0.3);
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 12px;
+      margin-bottom: 4px;
+      cursor: pointer;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .color-row label { font-size: 12px; }
+
+    .color-row input[type=color] {
+      width: 36px; height: 26px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 1px;
+      background: none;
+    }
+
+    #size-info {
+      font-size: 11px;
+      color: rgba(0,212,255,0.5);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    #btn-screenshot {
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px;
+      background: #00d4ff;
+      color: #0a0e1a;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #btn-screenshot:hover { background: #33ddff; }
+
+    #pos-info {
+      margin-top: 8px;
+      font-size: 10px;
+      color: rgba(255,255,255,0.25);
+      line-height: 1.6;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 控制面板 -->
+  <div id="control-panel">
+
+    <h3>尺寸</h3>
+    <select class="ctrl-select" id="size-select">
+      <option value="1920,1080">1920×1080 ｜ 簡報 / YouTube</option>
+      <option value="1080,1080">1080×1080 ｜ Instagram 方形</option>
+      <option value="1080,1920">1080×1920 ｜ 限時動態 IG/FB</option>
+      <option value="1200,630">1200×630  ｜ Facebook 貼文</option>
+      <option value="1200,675">1200×675  ｜ Twitter / X</option>
+      <option value="1080,566">1080×566  ｜ Instagram 橫式</option>
+      <option value="1080,1350">1080×1350 ｜ Instagram 直式</option>
+      <option value="1584,396">1584×396  ｜ LinkedIn 封面</option>
+    </select>
+    <div id="size-info">目前：1920 × 1080 px</div>
+
+    <h3>版面</h3>
+    <div class="ctrl-row">
+      <label>卡片透明度</label>
+      <input type="range" id="opacity" min="30" max="95" value="72">
+      <span class="ctrl-val" id="opacity-val">72%</span>
+    </div>
+    <div class="ctrl-row">
+      <label>卡片寬度</label>
+      <input type="range" id="card-width" min="300" max="1100" value="720">
+      <span class="ctrl-val" id="card-width-val">720px</span>
+    </div>
+    <div class="ctrl-row">
+      <label>遮罩深度</label>
+      <input type="range" id="overlay" min="0" max="70" value="20">
+      <span class="ctrl-val" id="overlay-val">20%</span>
+    </div>
+
+    <h3>文字</h3>
+    <div class="ctrl-row">
+      <label>標題大小</label>
+      <input type="range" id="title-size" min="24" max="90" value="52">
+      <span class="ctrl-val" id="title-size-val">52px</span>
+    </div>
+    <div class="ctrl-row">
+      <label>摘要大小</label>
+      <input type="range" id="summary-size" min="14" max="40" value="22">
+      <span class="ctrl-val" id="summary-size-val">22px</span>
+    </div>
+    <div class="ctrl-row">
+      <label>行距</label>
+      <input type="range" id="line-height" min="120" max="220" value="185">
+      <span class="ctrl-val" id="line-height-val">1.85</span>
+    </div>
+
+    <div style="margin-bottom:8px;">
+      <label style="font-size:12px;display:block;margin-bottom:4px;">字型</label>
+      <select class="ctrl-select" id="font-select">
+        <option value="'Noto Sans TC', sans-serif">Noto Sans TC（預設中文）</option>
+        <option value="'Inter', sans-serif">Inter（英文/數字）</option>
+        <option value="Georgia, serif">Georgia（襯線）</option>
+        <option value="'Courier New', monospace">Courier（等寬）</option>
+      </select>
+    </div>
+
+    <h3>顏色</h3>
+    <div class="color-row">
+      <label>標題顏色</label>
+      <input type="color" id="title-color" value="#ffffff">
+    </div>
+    <div class="color-row">
+      <label>摘要顏色</label>
+      <input type="color" id="summary-color" value="#d1dce8">
+    </div>
+    <div class="color-row">
+      <label>強調色</label>
+      <input type="color" id="accent-color" value="#00d4ff">
+    </div>
+
+    <button id="btn-screenshot">▶ 截圖前點我（隱藏面板）</button>
+    <div id="pos-info">拖移卡片後，座標顯示在這裡</div>
+  </div>
+
+  <!-- 畫布 -->
+  <div id="canvas-wrap">
+    <div class="container" id="canvas">
+      <img class="bg-photo" id="bg-photo"
+        src="https://images.pexels.com/photos/35280311/pexels-photo-35280311.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop"
+        alt="background">
+      <div class="overlay"></div>
+
+      <div id="text-card">
+        <span class="drag-hint">⠿ 拖移調整位置</span>
+        <div class="tag-bar">
+          <div class="tag-line"></div>
+          <span class="tag-label">Industry Insight</span>
+        </div>
+        <h1 class="title" contenteditable="true">AI 驅動的智慧製造趨勢</h1>
+        <div class="divider"></div>
+        <p class="summary" contenteditable="true">隨著人工智慧技術的快速發展，智慧製造已成為全球製造業轉型的核心方向。透過機器學習與電腦視覺的整合，工廠得以實現更高效的品質檢測、預測性維護與自動化排程，大幅提升整體生產效率與競爭力。</p>
+        <div class="date-badge" contenteditable="true">2026.04.15</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── 尺寸定義 ──
+    const SIZES = {
+      '1920,1080': { w: 1920, h: 1080, cardW: 720,  titlePx: 52, summaryPx: 22 },
+      '1080,1080': { w: 1080, h: 1080, cardW: 600,  titlePx: 44, summaryPx: 20 },
+      '1080,1920': { w: 1080, h: 1920, cardW: 860,  titlePx: 56, summaryPx: 24 },
+      '1200,630':  { w: 1200, h: 630,  cardW: 680,  titlePx: 42, summaryPx: 18 },
+      '1200,675':  { w: 1200, h: 675,  cardW: 680,  titlePx: 44, summaryPx: 19 },
+      '1080,566':  { w: 1080, h: 566,  cardW: 600,  titlePx: 36, summaryPx: 17 },
+      '1080,1350': { w: 1080, h: 1350, cardW: 820,  titlePx: 50, summaryPx: 22 },
+      '1584,396':  { w: 1584, h: 396,  cardW: 700,  titlePx: 32, summaryPx: 16 },
+    };
+
+    let currentScale = 1;
+    const wrap    = document.getElementById('canvas-wrap');
+    const canvas  = document.getElementById('canvas');
+    const card    = document.getElementById('text-card');
+    const bgPhoto = document.getElementById('bg-photo');
+
+    function applySize(key) {
+      const s = SIZES[key];
+      if (!s) return;
+
+      // 更新畫布尺寸
+      canvas.style.width  = s.w + 'px';
+      canvas.style.height = s.h + 'px';
+
+      // 更新背景圖
+      bgPhoto.src = `https://images.pexels.com/photos/35280311/pexels-photo-35280311.jpeg?auto=compress&cs=tinysrgb&w=${s.w}&h=${s.h}&fit=crop`;
+
+      // 重置卡片預設位置
+      card.style.bottom = 'auto';
+      card.style.right  = 'auto';
+      card.style.width  = s.cardW + 'px';
+      card.style.left   = (s.w - s.cardW - 80) + 'px';
+      card.style.top    = (s.h - 400) + 'px';
+
+      // 同步滑桿
+      document.getElementById('card-width').value    = s.cardW;
+      document.getElementById('card-width-val').textContent = s.cardW + 'px';
+      document.getElementById('title-size').value    = s.titlePx;
+      document.getElementById('title-size-val').textContent = s.titlePx + 'px';
+      document.getElementById('summary-size').value  = s.summaryPx;
+      document.getElementById('summary-size-val').textContent = s.summaryPx + 'px';
+      document.querySelector('.title').style.fontSize   = s.titlePx + 'px';
+      document.querySelector('.summary').style.fontSize = s.summaryPx + 'px';
+
+      document.getElementById('size-info').textContent = `目前：${s.w} × ${s.h} px`;
+
+      // 縮放畫布以適應視窗
+      const panelW  = 300;
+      const vw = window.innerWidth  - panelW - 40;
+      const vh = window.innerHeight - 40;
+      currentScale = Math.min(vw / s.w, vh / s.h);
+      wrap.style.transform = `scale(${currentScale})`;
+      wrap.style.marginTop = '0';
+    }
+
+    // 初始化
+    applySize('1920,1080');
+
+    document.getElementById('size-select').addEventListener('change', e => {
+      applySize(e.target.value);
+    });
+
+    // ── 拖移（含 scale 修正）──
+    let isDragging = false, startX, startY, origLeft, origTop;
+
+    card.addEventListener('mousedown', e => {
+      if (e.target.contentEditable === 'true') return;
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      origLeft = parseInt(card.style.left) || 0;
+      origTop  = parseInt(card.style.top)  || 0;
+      card.classList.add('no-hint');
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      const dx = (e.clientX - startX) / currentScale;
+      const dy = (e.clientY - startY) / currentScale;
+      card.style.left = (origLeft + dx) + 'px';
+      card.style.top  = (origTop  + dy) + 'px';
+      document.getElementById('pos-info').textContent =
+        `left: ${Math.round(origLeft + dx)}px  top: ${Math.round(origTop + dy)}px`;
+    });
+
+    document.addEventListener('mouseup', () => { isDragging = false; });
+
+    // ── 滑桿控制 ──
+    function bindRange(id, valId, unit, fn) {
+      const el = document.getElementById(id);
+      const vl = document.getElementById(valId);
+      el.addEventListener('input', () => {
+        vl.textContent = el.value + unit;
+        fn(el.value);
+      });
+    }
+
+    bindRange('opacity',      'opacity-val',       '%',  v => card.style.background = `rgba(0,0,0,${v/100})`);
+    bindRange('card-width',   'card-width-val',    'px', v => card.style.width = v + 'px');
+    bindRange('overlay',      'overlay-val',       '%',  v => document.querySelector('.overlay').style.background = `rgba(0,0,0,${v/100})`);
+    bindRange('title-size',   'title-size-val',    'px', v => document.querySelector('.title').style.fontSize   = v + 'px');
+    bindRange('summary-size', 'summary-size-val',  'px', v => document.querySelector('.summary').style.fontSize = v + 'px');
+    bindRange('line-height',  'line-height-val',   '',   v => {
+      const val = (v / 100).toFixed(2);
+      document.getElementById('line-height-val').textContent = val;
+      document.querySelector('.summary').style.lineHeight = val;
+    });
+
+    // ── 顏色控制 ──
+    document.getElementById('title-color').addEventListener('input', e => {
+      document.querySelector('.title').style.color = e.target.value;
+    });
+    document.getElementById('summary-color').addEventListener('input', e => {
+      document.querySelector('.summary').style.color = e.target.value;
+    });
+    document.getElementById('accent-color').addEventListener('input', e => {
+      const v = e.target.value;
+      document.querySelector('.tag-line').style.background = v;
+      document.querySelector('.tag-label').style.color = v;
+      card.style.borderLeftColor = v;
+    });
+
+    // ── 字型 ──
+    document.getElementById('font-select').addEventListener('change', e => {
+      card.style.fontFamily = e.target.value;
+    });
+
+    // ── contenteditable 提示 ──
+    document.querySelectorAll('[contenteditable]').forEach(el => {
+      el.style.outline = '1px dashed rgba(0,212,255,0.35)';
+      el.style.borderRadius = '3px';
+      el.addEventListener('mousedown', e => e.stopPropagation());
+      el.addEventListener('focus', () => el.style.outline = '1px solid rgba(0,212,255,0.8)');
+      el.addEventListener('blur',  () => el.style.outline = '1px dashed rgba(0,212,255,0.35)');
+    });
+
+    // ── 截圖按鈕 ──
+    let panelHidden = false;
+    document.getElementById('btn-screenshot').addEventListener('click', () => {
+      const panel = document.getElementById('control-panel');
+      panelHidden = !panelHidden;
+      panel.style.display = panelHidden ? 'none' : '';
+      document.getElementById('btn-screenshot').textContent = panelHidden
+        ? '▶ 截圖前點我（隱藏面板）'
+        : '▶ 截圖前點我（隱藏面板）';
+      if (panelHidden) {
+        const sel = document.getElementById('size-select');
+        const [w, h] = sel.value.split(',');
+        alert(`面板已隱藏！\n\n現在執行截圖：\nnode ~/Downloads/Vivian-agent/scripts/screenshot.js \\\n  ~/Downloads/Vivian-agent/output/article-cards/20260415_AI驅動的智慧製造趨勢.html\n\n截圖尺寸：${w}×${h}`);
+      }
+    });
+  </script>
+</body>
+</html>

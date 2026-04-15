@@ -1,0 +1,10 @@
+# 敏感資訊
+.env
+.env.local
+.env*.local
+
+# 系統檔案
+.DS_Store
+
+# 套件
+node_modules/
