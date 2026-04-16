@@ -2,7 +2,10 @@
 
 # Vivian-Agent 同步腳本
 # 用途：備份 Claude 設定 + 同步到 GitHub + 拉取最新版本
-# 使用方式：./sync.sh 或由 cron 自動執行
+# 使用方式：./sync.sh 或由 Windows 工作排程器自動執行
+
+# Windows: 確保 gh 在 PATH 中
+export PATH="$PATH:/c/Program Files/GitHub CLI"
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_FILE="$REPO_DIR/.sync.log"
@@ -18,8 +21,8 @@ echo "[$TIMESTAMP] 開始同步..." >> "$LOG_FILE"
 echo "[$TIMESTAMP] 備份 Claude 設定..." >> "$LOG_FILE"
 cp "$CLAUDE_DIR/settings.json" "$CONFIG_DIR/settings.json" 2>> "$LOG_FILE"
 cp "$CLAUDE_DIR/statusline-command.sh" "$CONFIG_DIR/statusline-command.sh" 2>> "$LOG_FILE"
-rsync -a --delete "$CLAUDE_DIR/commands/" "$CONFIG_DIR/commands/" 2>> "$LOG_FILE"
-rsync -a --delete "$CLAUDE_DIR/skills/" "$CONFIG_DIR/skills/" 2>> "$LOG_FILE"
+rm -rf "$CONFIG_DIR/commands" && cp -r "$CLAUDE_DIR/commands" "$CONFIG_DIR/commands" 2>> "$LOG_FILE"
+rm -rf "$CONFIG_DIR/skills"  && cp -r "$CLAUDE_DIR/skills"  "$CONFIG_DIR/skills"  2>> "$LOG_FILE"
 
 # 2. 拉取遠端最新版本
 git fetch origin >> "$LOG_FILE" 2>&1
