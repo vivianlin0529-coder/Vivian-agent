@@ -35,7 +35,7 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
 fi
 
 # 4. 合併遠端變更（rebase 策略，保持 commit 整潔）
-git pull --rebase origin main >> "$LOG_FILE" 2>&1
+git pull --rebase --autostash origin main >> "$LOG_FILE" 2>&1
 
 # 5. 推送到 GitHub
 git push origin main >> "$LOG_FILE" 2>&1
