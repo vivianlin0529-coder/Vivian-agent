@@ -1,0 +1,37 @@
+name: 🌅 Vivi 每日晨報
+
+on:
+  schedule:
+    - cron: '0 0 * * 1-5'   # 週一到週五 UTC 00:00 = 台灣 08:00
+  workflow_dispatch:          # 手動觸發
+
+jobs:
+  morning-brief:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic requests notion-client google-api-python-client google-auth-httplib2 google-auth-oauthlib
+
+      - name: Run morning briefing
+        env:
+          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
+          GMAIL_TOKEN_JSON:     ${{ secrets.GMAIL_TOKEN_JSON }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          NOTION_TOKEN:         ${{ secrets.NOTION_TOKEN }}
+          NOTION_JOURNAL_DB:    ${{ secrets.NOTION_JOURNAL_DB }}
+        run: python morning_brief.py
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: morning-report-${{ github.run_number }}
+          path: morning_report.md
+          retention-days: 7
