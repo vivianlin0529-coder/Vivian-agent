@@ -30,7 +30,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install anthropic requests notion-client moviepy pillow numpy \
+          pip install google-generativeai requests notion-client moviepy pillow numpy \
                       google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
       - name: Restore YouTube OAuth token
@@ -39,7 +39,7 @@ jobs:
 
       - name: Run video production pipeline
         env:
-          ANTHROPIC_API_KEY:      ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY:         ${{ secrets.GEMINI_API_KEY }}
           ELEVENLABS_API_KEY:     ${{ secrets.ELEVENLABS_API_KEY }}
           ELEVENLABS_VOICE_ID:    ${{ secrets.ELEVENLABS_VOICE_ID }}
           YOUTUBE_API_KEY:        ${{ secrets.YOUTUBE_API_KEY }}

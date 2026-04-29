@@ -9,21 +9,24 @@ Vivi AI研習社 — 每日影片自動生產流程
 import os, re, json, datetime, base64, time, numpy as np
 from pathlib import Path
 import requests
-import anthropic
+import google.generativeai as genai
 from PIL import Image, ImageDraw, ImageFont
 from moviepy import AudioFileClip, ImageClip, concatenate_videoclips
 from video_renderer import render_animated_video
 
 # ── 環境變數 ──────────────────────────────
 
-ANTHROPIC_KEY    = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_KEY       = os.getenv("GEMINI_API_KEY", "")
 ELEVENLABS_KEY   = os.getenv("ELEVENLABS_API_KEY", "")
 ELEVENLABS_VOICE = os.getenv("ELEVENLABS_VOICE_ID", "oGcfKz3pBlkD56OfrAe5")
 YOUTUBE_API_KEY  = os.getenv("YOUTUBE_API_KEY", "")
 NOTION_TOKEN     = os.getenv("NOTION_TOKEN", "")
-NOTION_VIDEO_DB  = os.getenv("NOTION_VIDEO_DB", "")   # 參考影片資料庫 ID
+NOTION_VIDEO_DB  = os.getenv("NOTION_VIDEO_DB", "")
 
-claude = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+# ── Gemini 初始化 ─────────────────────────
+genai.configure(api_key=GEMINI_KEY)
+gemini = genai.GenerativeModel("gemini-1.5-flash")
+
 
 # ── 品牌視覺設定 ──────────────────────────
 
@@ -60,12 +63,8 @@ YouTube 頻道定位：AI 工具教學 × 職場效率 × 普通人也能用。
   "japanese": [{"name":"...", "url":"...", "positioning":"...", "sample_video":"..."}, ...]
 }
 """
-    msg = claude.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=1500,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    text = msg.content[0].text
+    msg = gemini.generate_content(prompt)
+    text = msg.text
     try:
         json_match = re.search(r'\{[\s\S]+\}', text)
         return json.loads(json_match.group()) if json_match else {"english": [], "japanese": [], "raw": text}

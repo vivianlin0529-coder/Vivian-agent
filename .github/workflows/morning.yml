@@ -17,11 +17,11 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install anthropic requests notion-client google-api-python-client google-auth-httplib2 google-auth-oauthlib
+        run: pip install google-generativeai requests notion-client google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
       - name: Run morning briefing
         env:
-          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
           GMAIL_TOKEN_JSON:     ${{ secrets.GMAIL_TOKEN_JSON }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           NOTION_TOKEN:         ${{ secrets.NOTION_TOKEN }}

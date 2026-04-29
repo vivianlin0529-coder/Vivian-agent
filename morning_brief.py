@@ -5,7 +5,7 @@ Vivi AI研習社 — 每日晨報
 
 import os, json, datetime, pickle, base64
 from pathlib import Path
-import anthropic
+import google.generativeai as genai
 import requests
 
 # ── 工具函數 ──────────────────────────────
@@ -115,7 +115,8 @@ def fetch_notion_todos():
 
 def generate_report(emails, events, todos):
     print("🤖 Claude 生成簡報...")
-    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
+    model = genai.GenerativeModel("gemini-1.5-flash")
     today = datetime.datetime.now().strftime("%Y-%m-%d %A")
 
     prompt = f"""
