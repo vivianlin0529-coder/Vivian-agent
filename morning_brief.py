@@ -115,7 +115,7 @@ def fetch_notion_todos():
 
 def generate_report(emails, events, todos):
     print("🤖 Gemini 生成簡報...")
-    gemini = genai_sdk.Client(api_key=os.getenv("GEMINI_API_KEY", ""), http_options={"api_version": "v1"})
+    gemini = genai_sdk.Client(api_key=os.getenv("GEMINI_API_KEY", ""))
     today = datetime.datetime.now().strftime("%Y-%m-%d %A")
 
     prompt = f"""
@@ -141,7 +141,7 @@ def generate_report(emails, events, todos):
 格式要簡潔，適合早上快速掃瞄。
 """
 
-    msg = gemini.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+    msg = gemini.models.generate_content(model="gemini-2.0-flash", contents=prompt)
     return msg.text
 
 # ── 主流程 ────────────────────────────────
