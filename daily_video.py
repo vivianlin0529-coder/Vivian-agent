@@ -12,6 +12,7 @@ import requests
 import anthropic
 from PIL import Image, ImageDraw, ImageFont
 from moviepy import AudioFileClip, ImageClip, concatenate_videoclips
+from video_renderer import render_animated_video
 
 # ── 環境變數 ──────────────────────────────
 
@@ -387,17 +388,7 @@ def _make_card(lines: list, duration: float) -> ImageClip:
     return ImageClip(np.array(img)).with_duration(duration)
 
 def render_video(audio_path: str, script: str, output: str = "video_final.mp4") -> str:
-    print("🎬 渲染影片（字幕卡）...")
-    segs = [s.strip() for s in re.split(r'\n+', script) if s.strip()]
-    audio = AudioFileClip(audio_path)
-    per = audio.duration / len(segs)
-    clips = [_make_card(_wrap(s, LINE_CHARS), per) for s in segs]
-    final = concatenate_videoclips(clips, method="compose").with_audio(audio)
-    final.write_videofile(output, fps=24, codec="libx264", audio_codec="aac", logger=None)
-    audio.close()
-    sz = Path(output).stat().st_size
-    print(f"  ✅ 影片儲存：{output} ({sz//1024} KB)")
-    return output
+    return render_animated_video(audio_path, script, output)
 
 
 # ═══════════════════════════════════════════

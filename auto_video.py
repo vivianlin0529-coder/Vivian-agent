@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from moviepy import AudioFileClip, ImageClip, concatenate_videoclips
+from video_renderer import render_animated_video
 
 # 載入環境變數
 load_dotenv()
@@ -135,8 +136,13 @@ def _split_script_to_cards(script: str) -> list[str]:
             cards.append(seg)
     return cards
 
-def generate_video(audio_path: str, script: str, output_path: str = "video.mp4") -> str:
-    print("🎬 本地生成字幕卡影片中...")
+def generate_video(audio_path: str, script: str, output_path: str = "video_final.mp4") -> str:
+    print("🎬 本地生成動態教學影片中...")
+    return render_animated_video(audio_path, script, output_path)
+
+def generate_video_legacy(audio_path: str, script: str, output_path: str = "video_final.mp4") -> str:
+    """舊版靜態字幕卡（備用）"""
+    print("🎬 本地生成字幕卡影片中（舊版）...")
 
     # 取得音訊時長
     audio_clip = AudioFileClip(audio_path)
