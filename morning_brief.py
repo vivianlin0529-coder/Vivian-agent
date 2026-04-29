@@ -115,7 +115,7 @@ def fetch_notion_todos():
 
 def generate_report(emails, events, todos):
     print("🤖 Gemini 生成簡報...")
-    gemini = genai_sdk.Client(api_key=os.getenv("GEMINI_API_KEY", ""))
+    gemini = genai_sdk.Client(api_key=os.getenv("GEMINI_API_KEY", ""), http_options={"api_version": "v1"})
     today = datetime.datetime.now().strftime("%Y-%m-%d %A")
 
     prompt = f"""
