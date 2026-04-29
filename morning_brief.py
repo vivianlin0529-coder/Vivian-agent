@@ -5,7 +5,7 @@ Vivi AI研習社 — 每日晨報
 
 import os, json, datetime, pickle, base64
 from pathlib import Path
-import google.generativeai as genai
+from google import genai as genai_sdk
 import requests
 
 # ── 工具函數 ──────────────────────────────
@@ -114,9 +114,8 @@ def fetch_notion_todos():
 # ── Step 4：Claude 生成簡報 ───────────────
 
 def generate_report(emails, events, todos):
-    print("🤖 Claude 生成簡報...")
-    genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    print("🤖 Gemini 生成簡報...")
+    gemini = genai_sdk.Client(api_key=os.getenv("GEMINI_API_KEY", ""))
     today = datetime.datetime.now().strftime("%Y-%m-%d %A")
 
     prompt = f"""
@@ -142,12 +141,8 @@ def generate_report(emails, events, todos):
 格式要簡潔，適合早上快速掃瞄。
 """
 
-    message = client.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return message.content[0].text
+    msg = gemini.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    return msg.text
 
 # ── 主流程 ────────────────────────────────
 

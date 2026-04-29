@@ -17,7 +17,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install google-generativeai requests notion-client google-api-python-client google-auth-httplib2 google-auth-oauthlib
+        run: pip install google-genai requests notion-client google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
       - name: Run morning briefing
         env:

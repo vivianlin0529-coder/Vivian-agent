@@ -9,7 +9,7 @@ Vivi AI研習社 — 每日影片自動生產流程
 import os, re, json, datetime, base64, time, numpy as np
 from pathlib import Path
 import requests
-import google.generativeai as genai
+from google import genai as genai_sdk
 from PIL import Image, ImageDraw, ImageFont
 from moviepy import AudioFileClip, ImageClip, concatenate_videoclips
 from video_renderer import render_animated_video
@@ -24,8 +24,8 @@ NOTION_TOKEN     = os.getenv("NOTION_TOKEN", "")
 NOTION_VIDEO_DB  = os.getenv("NOTION_VIDEO_DB", "")
 
 # ── Gemini 初始化 ─────────────────────────
-genai.configure(api_key=GEMINI_KEY)
-gemini = genai.GenerativeModel("gemini-1.5-flash")
+gemini = genai_sdk.Client(api_key=GEMINI_KEY)
+GEMINI_MODEL = "gemini-2.0-flash"
 
 
 # ── 品牌視覺設定 ──────────────────────────
@@ -63,7 +63,7 @@ YouTube 頻道定位：AI 工具教學 × 職場效率 × 普通人也能用。
   "japanese": [{"name":"...", "url":"...", "positioning":"...", "sample_video":"..."}, ...]
 }
 """
-    msg = gemini.generate_content(prompt)
+    msg = gemini.models.generate_content(model=GEMINI_MODEL, contents=prompt)
     text = msg.text
     try:
         json_match = re.search(r'\{[\s\S]+\}', text)
@@ -113,12 +113,8 @@ def analyze_viral_topics(manual_topic: str = "") -> list:
   ...
 ]
 """
-    msg = claude.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    text = msg.content[0].text
+    msg = gemini.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+    text = msg.text
     try:
         json_match = re.search(r'\[[\s\S]+\]', text)
         topics = json.loads(json_match.group()) if json_match else []
@@ -205,12 +201,8 @@ def analyze_video_outliers(videos: list, keyword: str) -> list:
 
 輸出 JSON 陣列，每個元素只有 "title" 和 "outlier_reason" 兩個 key。
 """
-    msg = claude.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=1000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    text = msg.content[0].text
+    msg = gemini.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+    text = msg.text
     try:
         json_match = re.search(r'\[[\s\S]+\]', text)
         analyses = json.loads(json_match.group()) if json_match else []
@@ -303,12 +295,8 @@ def generate_script(topic: dict) -> tuple[str, str, str, list]:
   "tags": ["...", "..."]
 }}
 """
-    msg = claude.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    text = msg.content[0].text
+    msg = gemini.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+    text = msg.text
     try:
         json_match = re.search(r'\{[\s\S]+\}', text)
         data = json.loads(json_match.group()) if json_match else {}
