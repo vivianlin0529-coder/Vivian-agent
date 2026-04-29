@@ -141,7 +141,7 @@ def generate_report(emails, events, todos):
 格式要簡潔，適合早上快速掃瞄。
 """
 
-    msg = gemini.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    msg = gemini.models.generate_content(model="gemini-1.5-flash", contents=prompt)
     return msg.text
 
 # ── 主流程 ────────────────────────────────

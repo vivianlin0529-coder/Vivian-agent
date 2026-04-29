@@ -25,7 +25,7 @@ NOTION_VIDEO_DB  = os.getenv("NOTION_VIDEO_DB", "")
 
 # ── Gemini 初始化 ─────────────────────────
 gemini = genai_sdk.Client(api_key=GEMINI_KEY)
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-1.5-flash"
 
 
 # ── 品牌視覺設定 ──────────────────────────
