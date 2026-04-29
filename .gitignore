@@ -2,6 +2,8 @@
 .env
 .env.local
 .env*.local
+client_secret*.json
+token.json
 
 # 系統檔案
 .DS_Store

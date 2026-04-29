@@ -1,0 +1,74 @@
+{
+  "title": "我用這3招AI，從加班地獄畢業！文科生也能準時下班，還能喝下午茶！",
+  "description": "哈囉，我是 Vivi！你是不是也受夠了那些重複性高、又沒意義的行政工作，讓你老是加班加到懷疑人生？別擔心！我也是文科出身的 PM，今天就要手把手教你 3 個超簡單、連文科生都能輕鬆上手的 AI 省時術，讓你告別加班人生，準時下班不是夢！\n\n這些方法我都親自測試過，真的幫我省下超多時間，讓我有空喝下午茶，享受生活！\n\n影片中你會學到：\n1.  如何用 AI 一鍵搞定「會議記錄懶人包」，重點、待辦、負責人一次到位。\n2.  秒殺「客戶信件草稿」，告別絞盡腦汁的開頭與結尾。\n3.  讓 AI 變身你的「資料分類小幫手」，快速分析客戶回饋，一眼掌握重點。\n\n快跟我一起動手做，把時間要回來！\n\n👇 留言告訴我，你最想用 AI 搞定哪種重複性工作？\n\n#Vivi林怡伶 #AI省時術 #告別加班 #文科生AI #準時下班 #效率秘訣 #ChatGPT應用 #Claude技巧 #生產力工具 #職場小白 #PM學習 #AI教學",
+  "tags": [
+    "AI工具",
+    "省時技巧",
+    "準時下班",
+    "效率提升",
+    "文科生",
+    "職場生產力",
+    "ChatGPT",
+    "Claude",
+    "AI應用",
+    "行政助理",
+    "資料整理",
+    "Vivi",
+    "PM",
+    "辦公室技巧",
+    "生產力工具",
+    "職場生存",
+    "林怡伶"
+  ],
+  "topic": {
+    "title": "告別加班人生！文科生也能學會的AI省時術",
+    "appeal": "所有上班族夢寐以求的目標就是準時下班。這個影片將展示如何利用簡單的 AI 工具，自動化處理那些重複性高、耗時的行政或資料整理工作，讓文科生也能輕鬆上手，快速提升工作效率，享受生活。",
+    "algorithm": "AI 自動化（RPA + AI Agent）將在 2025-2026 年更普及且易於操作。針對重複性高的辦公室工作，如文件分類、排程管理、基礎數據整理等，AI 工具將提供『No-Code / Low-Code』的解決方案，讓非工程師也能設定。關鍵字如『AI 自動化』、『準時下班』、『重複性工作 AI』將持續熱門。",
+    "keyword": "AI 自動化, 準時下班, 重複性工作 AI, 文科 AI, No-code AI",
+    "score": 10,
+    "reason": "『準時下班』是台灣上班族永恆的願望，結合 AI 賦能非技術背景人士，具有極高的吸引力和實用性。Vivi 的人設讓這項技能顯得更容易學習，擊中受眾痛點。"
+  },
+  "benchmark": {
+    "english": [
+      {
+        "name": "Matt Wolfe",
+        "url": "https://www.youtube.com/@mrmattwolfe",
+        "positioning": "專注於分享最新AI科技趨勢、工具教學，以及如何運用AI創造副業與商業機會。",
+        "sample_video": "The 3 Best AI Side Hustles To Start In 2024"
+      },
+      {
+        "name": "Liam Ottley",
+        "url": "https://www.youtube.com/@LiamOttley",
+        "positioning": "教導如何利用AI工具提升生產力、自動化工作流程，並開發AI變現的策略。",
+        "sample_video": "I Made A Full-Time Income With AI In 2024 (And So Can You)"
+      },
+      {
+        "name": "Learn with Leo",
+        "url": "https://www.youtube.com/@learnwithleo",
+        "positioning": "提供實用的AI工具操作教學，幫助普通人學習如何利用AI提升效率並創造額外收入。",
+        "sample_video": "I Use These 3 AI Websites To Make $3000 Per Month"
+      }
+    ],
+    "japanese": [
+      {
+        "name": "デジタルハックAIチャンネル",
+        "url": "https://www.youtube.com/@digitalhack-ai",
+        "positioning": "專注於分享AI工具的實用操作教學，幫助個人和企業提升效率並創造新的商業機會。",
+        "sample_video": "【ChatGPTで自動化】作業をAIにやらせて年間100万円以上稼ぐ方法3選"
+      },
+      {
+        "name": "AIクリエーターズ",
+        "url": "https://www.youtube.com/@AI_Creators_Channel",
+        "positioning": "針對創作者提供AI生成工具教學，幫助利用AI製作內容並開拓新的變現途徑。",
+        "sample_video": "【AI副業】AI美女画像を販売して月10万円稼ぐ方法"
+      },
+      {
+        "name": "AIの教科書（AIの専門家が教える）",
+        "url": "https://www.youtube.com/@ai-textbook",
+        "positioning": "由AI專家提供淺顯易懂的AI工具教學與應用分享，幫助大眾理解並有效運用AI於日常生活與職場。",
+        "sample_video": "【ChatGPTを超えた】無料なのにすごいAI！Claude3のヤバい使い方5選"
+      }
+    ]
+  },
+  "reference_videos": []
+}

@@ -18,14 +18,14 @@ from video_renderer import render_animated_video
 
 GEMINI_KEY       = os.getenv("GEMINI_API_KEY", "")
 ELEVENLABS_KEY   = os.getenv("ELEVENLABS_API_KEY", "")
-ELEVENLABS_VOICE = os.getenv("ELEVENLABS_VOICE_ID", "oGcfKz3pBlkD56OfrAe5")
+ELEVENLABS_VOICE = os.getenv("ELEVENLABS_VOICE_ID", "sk_34c3df4a2cf2066bf3cde61027a23715f48a28e1d5e08380")
 YOUTUBE_API_KEY  = os.getenv("YOUTUBE_API_KEY", "")
 NOTION_TOKEN     = os.getenv("NOTION_TOKEN", "")
 NOTION_VIDEO_DB  = os.getenv("NOTION_VIDEO_DB", "")
 
 # ── Gemini 初始化 ─────────────────────────
 gemini = genai_sdk.Client(api_key=GEMINI_KEY)
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 
 # ── 品牌視覺設定 ──────────────────────────
