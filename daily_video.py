@@ -212,41 +212,75 @@ def write_to_notion(videos: list, benchmark: dict, topic_title: str):
 # ═══════════════════════════════════════════
 def generate_script(topic: dict) -> tuple:
     print(f"\n✍️ 生成教學腳本：{topic['title']}")
-    tool = topic.get("tool", "AI工具")
+    tool = topic.get("tool", "Claude")
     prompt = f"""
-你是 Vivi（林怡伶）的 AI 分身，幫她寫 YouTube 教學影片腳本。
+你是 Vivi（林怡伶），台灣職場 AI 應用頻道主持人，專門教非技術背景的上班族用 AI 提升工作效率。
+
 選題：{topic['title']}
 主要工具：{tool}
 
-⚠️ 這是真實操作教學，不是廣告：
-- 每個步驟必須說清楚：去哪個網址 / 點哪個按鈕 / 輸入什麼文字 / 會看到什麼結果
-- 禁止行銷語言（「超強」「改變人生」「神器」）
-- Vivi 親身第一人稱語氣
+請設計一個3步驟的 YouTube 教學影片腳本，目標是讓台灣上班族看完立刻能照著做。
 
-輸出包含：
-1. 旁白腳本（hook + 3個步驟 + CTA，約300字，觀眾聽的）
-2. 每個步驟的結構化資料（畫面顯示用）
+嚴格要求：
+1. 每個步驟必須包含「真實可用的 Prompt 範本」和「AI 實際會輸出什麼」
+2. 情境要貼近台灣職場（會議記錄、Email、簡報、報表、客戶溝通）
+3. Prompt 要具體，包含：背景說明 + 具體要求 + 格式指定
+4. 輸出範例要真實，不能是空話，要有實際內容
+5. Bullet 重點要是動作導向（告訴觀眾「做什麼」）
 
-JSON 格式：
+輸出 JSON：
 {{
-  "title": "影片標題（口語化，含數字或具體結果）",
-  "description": "YouTube說明欄（含 #hashtag）",
-  "tags": ["標籤1","標籤2"],
-  "narration": "完整旁白腳本（300字，口語化，觀眾跟著做）",
-  "hook": "開場白（10秒，用具體數字）",
+  "title": "吸引人的影片標題（含數字＋具體結果，口語化）",
+  "description": "YouTube 說明欄（含工具名稱、適用情境、3個步驟摘要、#hashtag）",
+  "tags": ["AI工具","Vivi AI研習社","職場效率","台灣"],
+  "narration": "完整旁白（350字，口語化，像朋友分享，第一人稱）",
+  "hook": "開場白（15秒，用具體數字或痛點，讓觀眾有共鳴）",
+  "cta": "結尾（15秒，問觀眾問題＋訂閱）",
   "steps": [
     {{
       "num": 1,
       "heading": "步驟標題（5字內）",
-      "narration": "這個步驟的旁白（30-40字）",
-      "url": "實際要開啟的網址（必填，如 https://claude.ai）",
-      "action_label": "操作說明（顯示在畫面上，如：點「New Chat」→ 貼上文字）"
-      "bullets": ["關鍵動作1（6字內）", "關鍵動作2（6字內）", "預期結果（6字內）"]
+      "tool_name": "{tool}",
+      "narration": "這步驟的旁白（40-50字，口語化）",
+      "url": "實際網址（如 https://claude.ai）",
+      "action_label": "底部操作說明（20字內，如：複製會議記錄 → 貼入 Claude → 送出）",
+      "bullets": [
+        "動作1（8字內，動詞開頭）",
+        "動作2（8字內，動詞開頭）",
+        "預期結果（8字內）"
+      ],
+      "example_prompt": "完整的 Prompt 範本（要真實可用，包含背景＋具體要求＋格式，3-6行）",
+      "example_output": [
+        "【AI 輸出範例】",
+        "（真實的 AI 輸出內容，5-8行，要有實際資訊，不能是說明文字）"
+      ],
+      "tip": "進階小技巧（15字內，一句話點睛）"
     }},
-    {{"num": 2, "heading": "步驟標題", "narration": "旁白", "url": "https://...", "action_label": "操作說明"}},
-    {{"num": 3, "heading": "步驟標題", "narration": "旁白", "url": "https://...", "action_label": "操作說明"}}
-  ],
-  "cta": "結尾行動呼籲（10秒，問問題+訂閱）"
+    {{
+      "num": 2,
+      "heading": "第二步標題",
+      "tool_name": "{tool}",
+      "narration": "旁白",
+      "url": "網址",
+      "action_label": "操作說明",
+      "bullets": ["動作1","動作2","結果"],
+      "example_prompt": "完整 Prompt",
+      "example_output": ["輸出行1","輸出行2","輸出行3","輸出行4","輸出行5"],
+      "tip": "小技巧"
+    }},
+    {{
+      "num": 3,
+      "heading": "第三步標題",
+      "tool_name": "{tool}",
+      "narration": "旁白",
+      "url": "網址",
+      "action_label": "操作說明",
+      "bullets": ["動作1","動作2","結果"],
+      "example_prompt": "完整 Prompt",
+      "example_output": ["輸出行1","輸出行2","輸出行3","輸出行4","輸出行5"],
+      "tip": "小技巧"
+    }}
+  ]
 }}
 """
     data  = _gemini_json(prompt)
@@ -254,14 +288,16 @@ JSON 格式：
     narr  = data.get("narration", "")
     title = data.get("title", topic["title"])
     desc  = data.get("description", "")
-    tags  = data.get("tags", ["AI工具","Vivi AI研習社"])
+    tags  = data.get("tags", ["AI工具", "Vivi AI研習社"])
     hook  = data.get("hook", "")
     cta   = data.get("cta", "")
     full_narration = f"{hook}\n{narr}\n{cta}".strip() if hook else narr
+
     print(f"  步驟數：{len(steps)}")
     for s in steps:
-        print(f"    Step {s.get('num')}: {s.get('heading')} → {s.get('url','')}")
+        print(f"    Step {s.get('num')}: {s.get('heading')} | bullets={len(s.get('bullets',[]))} | prompt_len={len(s.get('example_prompt',''))}")
     return full_narration, title, desc, tags, steps
+
 
 # ═══════════════════════════════════════════
 # 截圖擷取（Playwright + Stealth）
@@ -408,9 +444,9 @@ def capture_screenshots(steps: list) -> dict:
                     break
 
             # ✅ 截圖失敗時生成說明卡
-            # 截圖失敗：讓 video_renderer._placeholder 生成仿真 UI
+            # 截圖失敗：不存入 screenshots，video_renderer 會用 example 內容渲染
             if not success:
-                print(f"    ℹ️ Step {num} 交由 video_renderer 生成仿真 UI")
+                print(f"    ℹ️ Step {num} 截圖跳過，改用範例內容")
 
         browser.close()
     return screenshots
