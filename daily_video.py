@@ -214,88 +214,85 @@ def generate_script(topic: dict) -> tuple:
     print(f"\n✍️ 生成教學腳本：{topic['title']}")
     tool = topic.get("tool", "Claude")
     prompt = f"""
-你是 Vivi（林怡伶），台灣職場 AI 應用頻道主持人，專門教非技術背景的上班族用 AI 提升工作效率。
+你是 Vivi（台灣職場 AI 頻道主持人），要製作一支給上班族看的 YouTube 教學影片。
+格式：動態打字模擬 + AI 輸出串流，口說與畫面完全同步。
 
 選題：{topic['title']}
-主要工具：{tool}
+工具：{tool}
 
-請設計一個3步驟的 YouTube 教學影片腳本，目標是讓台灣上班族看完立刻能照著做。
+【絕對禁止】
+- 禁止出現任何中文真實人名（用「主管」「同事」「客戶」「業務」代替）
+- 禁止空洞句子（如「非常方便」「超級好用」「改變你的工作方式」）
+- Prompt 範本必須「直接可複製貼用」，不能是說明文字
 
-嚴格要求：
-1. 每個步驟必須包含「真實可用的 Prompt 範本」和「AI 實際會輸出什麼」
-2. 情境要貼近台灣職場（會議記錄、Email、簡報、報表、客戶溝通）
-3. Prompt 要具體，包含：背景說明 + 具體要求 + 格式指定
-4. 輸出範例要真實，不能是空話，要有實際內容
-5. Bullet 重點要是動作導向（告訴觀眾「做什麼」）
+【影片結構】
+Hook 28秒：前半痛點，後半成果
+每步驟約30秒：標題→打字動畫→AI輸出
 
-輸出 JSON：
+【旁白同步要求】
+- Hook 旁白：先描述痛點，再展示成果
+- 每步旁白：先說「做什麼」（打字階段），再說「AI給了什麼」（輸出階段）
+
+請輸出 JSON：
 {{
-  "title": "吸引人的影片標題（含數字＋具體結果，口語化）",
-  "description": "YouTube 說明欄（含工具名稱、適用情境、3個步驟摘要、#hashtag）",
-  "tags": ["AI工具","Vivi AI研習社","職場效率","台灣"],
-  "narration": "完整旁白（350字，口語化，像朋友分享，第一人稱）",
-  "hook": "開場白（15秒，用具體數字或痛點，讓觀眾有共鳴）",
-  "cta": "結尾（15秒，問觀眾問題＋訂閱）",
+  "title": "影片標題（含數字＋具體成果，口語，不超過25字）",
+  "description": "YouTube說明欄（含情境、3步驟摘要、適用對象、hashtag）",
+  "tags": ["AI工具","Vivi AI研習社","職場效率"],
+  "hook": "開場旁白（25秒，前半12秒說3個職場痛點，後半13秒說AI能做到什麼，結尾一句引入主題）",
+  "cta": "結尾旁白（12秒，問觀眾問題＋邀訂閱）",
+  "narration": "完整旁白（hook+3步+cta，350字，自然口語，每步包含「輸入什麼」和「得到什麼」的描述）",
+  "pain_points": [
+    "具體痛點1（15字內，真實職場情境，不能有人名）",
+    "具體痛點2（15字內）",
+    "具體痛點3（15字內）"
+  ],
+  "win_points": [
+    "使用AI後的成果1（15字內，具體數字或動作）",
+    "使用AI後的成果2（15字內）",
+    "使用AI後的成果3（15字內）"
+  ],
   "steps": [
     {{
       "num": 1,
       "heading": "步驟標題（5字內）",
       "tool_name": "{tool}",
-      "narration": "這步驟的旁白（40-50字，口語化）",
-      "url": "實際網址（如 https://claude.ai）",
-      "action_label": "底部操作說明（20字內，如：複製會議記錄 → 貼入 Claude → 送出）",
-      "bullets": [
-        "動作1（8字內，動詞開頭）",
-        "動作2（8字內，動詞開頭）",
-        "預期結果（8字內）"
-      ],
-      "example_prompt": "完整的 Prompt 範本（要真實可用，包含背景＋具體要求＋格式，3-6行）",
+      "narration": "這步的旁白（40字，前20字說要輸入什麼指令，後20字說AI輸出後能達成什麼效果）",
+      "url": "https://...",
+      "action_label": "底部提示（18字內）",
+      "bullets": ["動作1（8字內，動詞開頭）","動作2（8字內）","預期成果（8字內）"],
+      "example_prompt": "完整可用的Prompt（含：背景說明\n具體需求\n格式要求\n語氣要求，共4-6行，不含人名）",
       "example_output": [
-        "【AI 輸出範例】",
-        "（真實的 AI 輸出內容，5-8行，要有實際資訊，不能是說明文字）"
+        "（AI實際會輸出的內容，6-9行）",
+        "（第一行用【標題】格式）",
+        "（後續是真實內容，不是說明文字）",
+        "（用•或→標記關鍵項目）",
+        "（包含具體數字、時間、格式）"
       ],
-      "tip": "進階小技巧（15字內，一句話點睛）"
+      "tip": "進階技巧（14字內）"
     }},
-    {{
-      "num": 2,
-      "heading": "第二步標題",
-      "tool_name": "{tool}",
-      "narration": "旁白",
-      "url": "網址",
-      "action_label": "操作說明",
-      "bullets": ["動作1","動作2","結果"],
-      "example_prompt": "完整 Prompt",
-      "example_output": ["輸出行1","輸出行2","輸出行3","輸出行4","輸出行5"],
-      "tip": "小技巧"
-    }},
-    {{
-      "num": 3,
-      "heading": "第三步標題",
-      "tool_name": "{tool}",
-      "narration": "旁白",
-      "url": "網址",
-      "action_label": "操作說明",
-      "bullets": ["動作1","動作2","結果"],
-      "example_prompt": "完整 Prompt",
-      "example_output": ["輸出行1","輸出行2","輸出行3","輸出行4","輸出行5"],
-      "tip": "小技巧"
-    }}
+    {{"num":2,"heading":"步驟2","tool_name":"{tool}","narration":"旁白","url":"https://...","action_label":"提示","bullets":["動作1","動作2","成果"],"example_prompt":"完整Prompt","example_output":["輸出行1","輸出行2","輸出行3","輸出行4","輸出行5","輸出行6"],"tip":"技巧"}},
+    {{"num":3,"heading":"步驟3","tool_name":"{tool}","narration":"旁白","url":"https://...","action_label":"提示","bullets":["動作1","動作2","成果"],"example_prompt":"完整Prompt","example_output":["輸出行1","輸出行2","輸出行3","輸出行4","輸出行5","輸出行6"],"tip":"技巧"}}
   ]
 }}
 """
     data  = _gemini_json(prompt)
     steps = data.get("steps", [])
-    narr  = data.get("narration", "")
+    narr  = data.get("narration","")
     title = data.get("title", topic["title"])
-    desc  = data.get("description", "")
-    tags  = data.get("tags", ["AI工具", "Vivi AI研習社"])
-    hook  = data.get("hook", "")
-    cta   = data.get("cta", "")
-    full_narration = f"{hook}\n{narr}\n{cta}".strip() if hook else narr
+    desc  = data.get("description","")
+    tags  = data.get("tags",["AI工具","Vivi AI研習社"])
+    hook  = data.get("hook","")
+    cta   = data.get("cta","")
 
-    print(f"  步驟數：{len(steps)}")
+    # 把 pain/win points 注入到 step[0]，供 video_renderer hook 使用
+    if steps:
+        steps[0]["pain_points"] = data.get("pain_points",[])
+        steps[0]["win_points"]  = data.get("win_points",[])
+
+    full_narration = f"{hook}\n{narr}\n{cta}".strip() if hook else narr
+    print(f"  步驟：{len(steps)}")
     for s in steps:
-        print(f"    Step {s.get('num')}: {s.get('heading')} | bullets={len(s.get('bullets',[]))} | prompt_len={len(s.get('example_prompt',''))}")
+        print(f"    Step {s.get('num')}: {s.get('heading')} | prompt={len(s.get('example_prompt',''))}字")
     return full_narration, title, desc, tags, steps
 
 
@@ -358,98 +355,9 @@ def _make_fallback_screenshot(step: dict, path: str):
 
 
 def capture_screenshots(steps: list) -> dict:
-    print("\n📸 擷取步驟截圖...")
-    screenshots = {}
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        print("  ⚠️ playwright 未安裝，跳過截圖")
-        return screenshots
-
-    # ✅ 真實 Chrome user-agent，降低被 Cloudflare 擋的機率
-    UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-          "AppleWebKit/537.36 (KHTML, like Gecko) "
-          "Chrome/124.0.0.0 Safari/537.36")
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-blink-features=AutomationControlled",  # ✅ 隱藏自動化標記
-            ]
-        )
-        context = browser.new_context(
-            viewport={"width": 1280, "height": 800},
-            locale="zh-TW",
-            timezone_id="Asia/Taipei",
-            user_agent=UA,                     # ✅ 偽裝成真實瀏覽器
-            java_script_enabled=True,
-            extra_http_headers={               # ✅ 加入正常瀏覽器 headers
-                "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            }
-        )
-
-        # ✅ 注入 JS 隱藏 webdriver 標記（繞過 bot 偵測）
-        context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
-            Object.defineProperty(navigator, 'languages', { get: () => ['zh-TW', 'zh', 'en'] });
-        """)
-
-        page = context.new_page()
-
-        for step in steps:
-            num  = step.get("num")
-            url  = step.get("url", "")
-            path = f"screenshot_step{num}.png"
-
-            if not url or not url.startswith("http"):
-                continue
-
-            success = False
-            for attempt in range(2):  # 最多重試一次
-                try:
-                    print(f"  截圖 Step {num}（嘗試 {attempt+1}）：{url}")
-                    page.goto(url, timeout=20000, wait_until="domcontentloaded")
-                    page.wait_for_timeout(3500)  # ✅ 等更久讓 Cloudflare 通過
-
-                    # ✅ 判斷是否仍卡在 Cloudflare
-                    content = page.content()
-                    is_cf = any(kw in content for kw in [
-                        "正在執行安全驗證", "Checking your browser",
-                        "cf-browser-verification", "cloudflare", "Ray ID"
-                    ])
-
-                    if is_cf and attempt == 0:
-                        print(f"    ⚠️ 偵測到 Cloudflare，等待 5 秒後重試...")
-                        page.wait_for_timeout(5000)
-                        continue  # 重試
-
-                    if is_cf:
-                        print(f"    ⚠️ 仍被 Cloudflare 擋，改用說明卡")
-                        break
-
-                    page.screenshot(path=path, full_page=False)
-                    screenshots[num] = path
-                    print(f"  ✅ 截圖成功：{path}")
-                    success = True
-                    break
-
-                except Exception as e:
-                    print(f"  ⚠️ Step {num} 截圖失敗：{e}")
-                    break
-
-            # ✅ 截圖失敗時生成說明卡
-            # 截圖失敗：不存入 screenshots，video_renderer 會用 example 內容渲染
-            if not success:
-                print(f"    ℹ️ Step {num} 截圖跳過，改用範例內容")
-
-        browser.close()
-    return screenshots
+    """截圖功能已停用：改用 example_prompt/output 動態渲染"""
+    print("  📌 跳過截圖（使用動態範例渲染）")
+    return {}
 
 # ═══════════════════════════════════════════
 # 語音生成（Microsoft Edge TTS — 免費台灣女聲）
