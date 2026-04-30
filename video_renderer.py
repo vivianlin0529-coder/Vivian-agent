@@ -1,426 +1,291 @@
 """
-video_renderer.py — Vivi AI研習社 動態教學影片渲染器
-格式：1920x1080 / 15fps / 約 2-2.5 分鐘
-架構：
-  [0-28s]  痛點場景 → 成果預覽
-  [28s~]   每步驟：標題(3s) → 打字動畫(10s) → AI思考(3s) → 輸出串流(12s)
-  [尾]     CTA
-聲音同步：旁白按段落分配到各階段，做到畫面說什麼、嘴巴說什麼
+video_renderer.py — Vivi AI研習社
+每段視覺 = 自己的 TTS 音頻 → 保證完美口說同步
+總長 ~50-58 秒
 """
 from __future__ import annotations
-import textwrap, math, numpy as np
+import textwrap, numpy as np
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import AudioFileClip, VideoClip, concatenate_videoclips
 
-# ── 畫面尺寸 ─────────────────────────────────────────────────────────
-W, H     = 1920, 1080
-FPS      = 15          # 教學影片 15fps 足夠，省渲染時間
-TOP_H    = 68
-BOT_H    = 64
-AREA_TOP = TOP_H + 4
-AREA_BOT = H - BOT_H - 4
-AREA_H   = AREA_BOT - AREA_TOP
-LEFT_W   = 680
-SEP_X    = 700
-RIGHT_X  = 718
-RIGHT_W  = W - RIGHT_X - 16
-
-# ── 配色 ─────────────────────────────────────────────────────────────
-C = dict(
-    bg        = (243, 240, 235),
-    brand_bg  = (36, 26, 14),
-    brand_gold= (208, 162, 72),
-    left_bg   = (230, 222, 208),
-    sep       = (165, 88, 42),
-    accent    = (165, 88, 42),
-    accent_dk = (110, 54, 18),
-    head      = (26, 18, 8),
-    body      = (70, 50, 32),
-    bot_bg    = (36, 26, 14),
-    bot_fg    = (190, 164, 112),
-    # chat
-    chat_bg   = (252, 250, 246),
-    tool_bar  = (42, 34, 22),
-    prompt_bg = (228, 245, 224),
-    prompt_fg = (18, 72, 18),
-    out_bg    = (246, 241, 230),
-    out_fg    = (34, 24, 10),
-    cursor    = (165, 88, 42),
-    thinking  = (120, 100, 70),
-    lbl_bg    = (165, 88, 42),
-    lbl_fg    = (255, 255, 255),
-    # 痛點/成果
-    pain_bg   = (255, 248, 245),
-    pain_red  = (200, 40, 20),
-    win_bg    = (242, 250, 242),
-    win_grn   = (20, 140, 40),
-)
+W,H   = 1920,1080
+FPS   = 15
+TOP_H = 64; BOT_H = 60
+AY = TOP_H+4; AB = H-BOT_H-4; AH = AB-AY
+LW = 680; RX = 726; RW = W-RX-14
 BRAND = "Vivi AI研習社"
 
-# ── 字體快取 ─────────────────────────────────────────────────────────
+C = dict(
+    bg=(242,239,234),brand_bg=(34,24,12),gold=(206,158,68),
+    sep=(160,84,38),accent=(160,84,38),acdk=(108,50,14),
+    hd=(24,16,6),bd=(68,48,28),lbg=(228,220,206),
+    bot_bg=(34,24,12),bot_fg=(188,160,108),
+    cbg=(252,250,246),tbar=(40,30,18),
+    pbg=(226,244,222),pfg=(16,70,16),
+    obg=(246,240,228),ofg=(32,22,8),
+    lbl=(160,84,38),lblf=(255,255,255),
+    think=(118,96,64),acdk2=(108,50,14),
+    pain_bg=(255,246,243),pain_r=(195,35,18),pain_txt=(88,28,12),
+    win_bg=(241,250,241),win_g=(18,132,38),win_txt=(12,64,18),
+)
+
 _FC: dict = {}
-def _f(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
-    key = (size, bold)
-    if key not in _FC:
-        paths_b = ["/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
-                   "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
-                   "C:/Windows/Fonts/msjhbd.ttc"]
-        paths_r = ["/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-                   "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-                   "C:/Windows/Fonts/msjh.ttc"]
-        for p in (paths_b if bold else paths_r):
+def _f(sz,bold=False):
+    k=(sz,bold)
+    if k not in _FC:
+        pb=["/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+            "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc","C:/Windows/Fonts/msjhbd.ttc"]
+        pr=["/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc","C:/Windows/Fonts/msjh.ttc"]
+        for p in (pb if bold else pr):
             if Path(p).exists():
-                try:
-                    _FC[key] = ImageFont.truetype(p, size)
-                    break
+                try: _FC[k]=ImageFont.truetype(p,sz); break
                 except: pass
-        if key not in _FC:
-            _FC[key] = ImageFont.load_default()
-    return _FC[key]
+        if k not in _FC: _FC[k]=ImageFont.load_default()
+    return _FC[k]
 
-# ── 通用 Bar ─────────────────────────────────────────────────────────
-def _top(draw, title=""):
-    draw.rectangle([(0,0),(W,TOP_H)], fill=C["brand_bg"])
-    draw.text((32,(TOP_H-32)//2), BRAND, font=_f(32,True), fill=C["brand_gold"])
+def _top(draw,title=""):
+    draw.rectangle([(0,0),(W,TOP_H)],fill=C["brand_bg"])
+    draw.text((30,(TOP_H-30)//2),BRAND,font=_f(30,True),fill=C["gold"])
     if title:
-        t = title[:50]
-        tw = draw.textlength(t, font=_f(26))
-        draw.text(((W-tw)//2,(TOP_H-26)//2), t, font=_f(26), fill=(164,142,100))
+        tw=draw.textlength(title[:50],font=_f(24))
+        draw.text(((W-tw)//2,(TOP_H-24)//2),title[:50],font=_f(24),fill=(155,133,92))
 
-def _bot(draw, hint="", num=0, total=0):
-    draw.rectangle([(0,H-BOT_H),(W,H)], fill=C["bot_bg"])
+def _bot(draw,hint="",num=0,total=0):
+    draw.rectangle([(0,H-BOT_H),(W,H)],fill=C["bot_bg"])
     if hint:
-        hw = draw.textlength(hint[:72], font=_f(26))
-        draw.text(((W-hw)//2, H-BOT_H+(BOT_H-26)//2), hint[:72], font=_f(26), fill=C["bot_fg"])
+        hw=draw.textlength(hint[:72],font=_f(23))
+        draw.text(((W-hw)//2,H-BOT_H+(BOT_H-23)//2),hint[:72],font=_f(23),fill=C["bot_fg"])
     if total:
-        r, g = 7, 18
-        sx = W - (total*(r*2+g)) - 28; sy = H-14
-        for i in range(1, total+1):
+        r,g=6,16; sx=W-(total*(r*2+g))-22; sy=H-12
+        for i in range(1,total+1):
             draw.ellipse([(sx,sy-r),(sx+r*2,sy+r)],
-                         fill=C["brand_gold"] if i==num else (72,58,36))
-            sx += r*2+g
+                         fill=C["gold"] if i==num else (66,52,30)); sx+=r*2+g
 
-# ══════════════════════════════════════════════════════════════════════
-# HOOK：痛點 → 成果（前28秒）
-# ══════════════════════════════════════════════════════════════════════
-def _hook_clip(pain_lines: list[str], win_lines: list[str],
-               title: str, narr_hook: str, total_dur: float) -> VideoClip:
-    """
-    0%~45%: 痛點畫面（紅X，描述問題）
-    45%~55%: 過渡
-    55%~100%: 成果畫面（綠勾，展示AI輸出）
-    """
-    SWITCH = 0.48
+def _audio_dur(path):
+    try: return AudioFileClip(path).duration
+    except: return 7.0
 
-    def _base(bg_col):
-        img = Image.new("RGB",(W,H), bg_col)
-        draw = ImageDraw.Draw(img)
-        _top(draw, title)
-        _bot(draw)
-        return img, draw
+# ── 信箱爆滿 mockup ─────────────────────────────────
+def _inbox() -> Image.Image:
+    img=Image.new("RGB",(RW,AH),(245,245,245))
+    d=ImageDraw.Draw(img)
+    d.rectangle([(0,0),(RW,44)],fill=(0,72,177))
+    d.text((14,10),"📧  收件匣（47 封未讀）",font=_f(22,True),fill="white")
+    d.rectangle([(8,52),(RW-8,80)],fill="white",outline="#CCC",width=1)
+    d.text((16,58),"搜尋信件…",font=_f(20),fill="#AAAAAA")
+    rows=[
+        ("[急！] 請問上週報告什麼時候可以給我？","今天 09:14",True),
+        ("RE:RE:RE: 合約條款第三點修改意見…","今天 08:52",True),
+        ("【提醒】週五前請填寫差旅費報銷單","昨天 17:33",True),
+        ("Fwd: 下週一會議議程（各單位確認）","昨天 14:11",False),
+        ("RE: 關於新客戶提案，我有幾點想法…","昨天 11:08",True),
+        ("客戶反映產品問題，請盡速回覆","週二 10:22",True),
+        ("[會議記錄] 月會紀錄（共12頁請存檔）","週二 09:00",False),
+        ("[提醒×3] 績效面談表格尚未填寫","上週五",True),
+    ]
+    y=92
+    for subj,time,unread in rows:
+        bg=(255,242,242) if unread else (255,255,255)
+        d.rectangle([(0,y),(RW,y+52)],fill=bg,outline="#EEE",width=1)
+        dot=(195,35,18) if unread else (180,180,180)
+        d.ellipse([(10,y+19),(20,y+29)],fill=dot)
+        d.text((28,y+7),subj[:38],font=_f(20,bold=unread),fill="#222")
+        d.text((28,y+31),time,font=_f(17),fill="#888")
+        y+=54
+        if y>AH-36: break
+    d.rectangle([(0,AH-34),(RW,AH)],fill="#F0F0F0")
+    d.text((14,AH-26),"草稿：Email_回覆_v8_FINAL_FINAL.docx  ❌ 還沒寄出",font=_f(17),fill="#CC3333")
+    return img
 
-    # ── 預先渲染靜態幀（痛點 & 成果）
-    def _pain_frame():
-        img, draw = _base(C["pain_bg"])
-        # 大X
-        draw.text((W//2 - 80, AREA_TOP + 30), "✕", font=_f(120,True), fill=C["pain_red"])
-        draw.text((W//2 - 400, AREA_TOP + 180), "現在的你：", font=_f(48,True), fill=C["pain_red"])
-        y = AREA_TOP + 250
-        for line in pain_lines[:5]:
-            draw.text((W//2 - 380, y), f"• {line}", font=_f(40), fill=(100,40,20))
-            y += 60
-        return np.array(img)
+# ── AI整理好輸出 mockup ──────────────────────────────
+def _ai_output_mock() -> Image.Image:
+    img=Image.new("RGB",(RW,AH),(250,252,248))
+    d=ImageDraw.Draw(img)
+    d.rectangle([(0,0),(RW,44)],fill=(18,132,58))
+    d.text((14,10),"✅  Claude 整理結果（剛剛生成）",font=_f(22,True),fill="white")
+    y=58
+    d.text((18,y),"【本週重點摘要 × 待辦清單】",font=_f(26,True),fill=(12,80,24)); y+=42
+    d.rectangle([(12,y),(RW-12,y+2)],fill="#A8D8A8"); y+=12
+    items=[
+        ("📧","今日回覆","客戶問題 → Email 草稿已生成，待確認後寄出"),
+        ("📋","週五截止","差旅費報銷 → 表格已填，金額 NT$4,280"),
+        ("📊","週一前","KPI 追蹤表 → Q1 完成率 87%，缺口已標紅"),
+        ("🗂️","存檔完成","月會紀錄 → 5行重點版＋完整版已整理"),
+    ]
+    for icon,when,desc in items:
+        d.rectangle([(12,y),(RW-12,y+60)],fill="white",outline="#C8E8C8",width=1)
+        d.text((20,y+8),f"{icon}  {when}",font=_f(19,True),fill=(12,80,24))
+        d.text((20,y+32),f"   {desc}",font=_f(19),fill="#333"); y+=66
+    d.rectangle([(12,y+8),(RW-12,y+10)],fill="#C8E8C8")
+    d.text((18,y+18),"💡 以上由 AI 生成，點擊任一項可展開完整內容",font=_f(17),fill="#166534")
+    return img
 
-    def _win_frame():
-        img, draw = _base(C["win_bg"])
-        draw.text((W//2 - 80, AREA_TOP + 30), "✓", font=_f(120,True), fill=C["win_grn"])
-        draw.text((W//2 - 400, AREA_TOP + 180), "用 AI 之後：", font=_f(48,True), fill=C["win_grn"])
-        y = AREA_TOP + 250
-        for line in win_lines[:5]:
-            draw.text((W//2 - 380, y), f"✅ {line}", font=_f(40), fill=(20,80,20))
-            y += 60
-        # 大標
-        tw_t = draw.textlength(title, font=_f(52,True))
-        draw.text(((W-tw_t)//2, AREA_BOT - 100), title, font=_f(52,True), fill=C["accent"])
-        return np.array(img)
+# ── Hook clip（pain + win，各自音頻）───────────────────
+def _hook_clip(pain_pts,win_pts,title,pain_audio,win_audio):
+    pd=_audio_dur(pain_audio); wd=_audio_dur(win_audio)
 
-    pain_arr = _pain_frame()
-    win_arr  = _win_frame()
-    fade_dur = 0.4
+    # Pain frame
+    pi=Image.new("RGB",(W,H),C["pain_bg"]); pdr=ImageDraw.Draw(pi)
+    _top(pdr,title); _bot(pdr)
+    pdr.rectangle([(0,AY),(LW+18,AB)],fill=C["lbg"])
+    pdr.text((36,AY+22),"😩  現在的你",font=_f(42,True),fill=C["pain_r"])
+    pdr.rectangle([(36,AY+76),(LW-18,AY+80)],fill=C["pain_r"])
+    y=AY+96
+    for pt in pain_pts[:4]: pdr.text((36,y),f"✕  {pt[:24]}",font=_f(32),fill=C["pain_txt"]); y+=56
+    pi.paste(_inbox(),(RX,AY))
+    pdr.rectangle([(RX-2,AY-2),(W-12,AB+2)],outline=C["pain_r"],width=3)
+    pain_arr=np.array(pi)
 
-    def frame(t):
-        p = t / total_dur
-        if p < SWITCH - fade_dur/total_dur:
-            return pain_arr
-        elif p < SWITCH + fade_dur/total_dur:
-            # 漸變
-            alpha = (p - (SWITCH - fade_dur/total_dur)) / (2*fade_dur/total_dur)
-            alpha = float(np.clip(alpha, 0, 1))
-            return (alpha * win_arr.astype(np.float32) +
-                    (1-alpha) * pain_arr.astype(np.float32)).astype(np.uint8)
+    # Win frame
+    wi=Image.new("RGB",(W,H),C["win_bg"]); wdr=ImageDraw.Draw(wi)
+    _top(wdr,title); _bot(wdr)
+    wdr.rectangle([(0,AY),(LW+18,AB)],fill=C["lbg"])
+    wdr.text((36,AY+22),"🚀  用 AI 之後",font=_f(42,True),fill=C["win_g"])
+    wdr.rectangle([(36,AY+76),(LW-18,AY+80)],fill=C["win_g"])
+    y=AY+96
+    for wt in win_pts[:4]: wdr.text((36,y),f"✅  {wt[:24]}",font=_f(32),fill=C["win_txt"]); y+=56
+    wi.paste(_ai_output_mock(),(RX,AY))
+    wdr.rectangle([(RX-2,AY-2),(W-12,AB+2)],outline=C["win_g"],width=3)
+    win_arr=np.array(wi)
+
+    pc=VideoClip(lambda t:pain_arr,duration=pd)
+    wc=VideoClip(lambda t:win_arr,duration=wd)
+    if Path(pain_audio).exists(): pc=pc.set_audio(AudioFileClip(pain_audio))
+    if Path(win_audio).exists():  wc=wc.set_audio(AudioFileClip(win_audio))
+    return concatenate_videoclips([pc,wc],method="compose")
+
+# ── Step clip（typing 音頻 + output 音頻）────────────────
+def _step_clip(step,title,total,type_audio,out_audio):
+    td=_audio_dur(type_audio); od=_audio_dur(out_audio)
+    num=step.get("num",1); head=step.get("heading","")
+    bulls=step.get("bullets") or []; action=step.get("action_label","")
+    tool=step.get("tool_name","Claude"); prompt=step.get("example_prompt","").strip()
+    output=step.get("example_output") or []; tip=step.get("tip","")
+    out_text="\n".join(output)
+
+    # 靜態左側
+    base=Image.new("RGB",(W,H),C["bg"]); bd2=ImageDraw.Draw(base)
+    _top(bd2,title); _bot(bd2,action,num,total)
+    bd2.rectangle([(0,AY),(LW+18,AB)],fill=C["lbg"])
+    bd2.rectangle([(LW+16,AY),(LW+22,AB)],fill=C["sep"])
+    cx,cy,r=74,AY+62,38
+    bd2.ellipse([(cx-r,cy-r),(cx+r,cy+r)],fill=C["accent"])
+    nw=bd2.textlength(str(num),font=_f(40,True)); bd2.text((cx-nw//2,cy-24),str(num),font=_f(40,True),fill=(255,255,255))
+    fh=_f(50,True); hw=bd2.textlength(head,font=fh); fh=_f(40,True) if hw>LW-36 else fh
+    bd2.text((30,AY+112),head,font=fh,fill=C["hd"])
+    bd2.rectangle([(30,AY+184),(LW-8,AY+188)],fill=C["sep"])
+    y=AY+204
+    for i,b in enumerate(bulls[:3]):
+        tw2=bd2.textlength(f"0{i+1}",font=_f(15,True))
+        bd2.rectangle([(30,y+2),(30+32,y+32)],fill=C["accent"])
+        bd2.text((30+(32-tw2)//2,y+7),f"0{i+1}",font=_f(15,True),fill=(255,255,255))
+        bd2.text((70,y+4),b[:18],font=_f(28),fill=C["bd"]); y+=54
+    if tip and y<AB-60:
+        bd2.rectangle([(22,y+8),(LW-4,y+52)],fill=C["acdk"])
+        bd2.text((36,y+16),f"💡 {tip[:26]}",font=_f(22),fill=(255,215,135))
+    base_arr=np.array(base)
+
+    # 右側動態
+    PAD=14; BAR=44; LBL=26
+    pwl=[]
+    for seg in prompt.split("\n"): pwl+=(textwrap.wrap(seg,width=33) or [""])
+    PH=max(len(pwl)*29+16,68)
+    OUT_Y=AY+BAR+PAD+LBL+6+PH+PAD+LBL+6
+
+    def _R(arr,sp,so,dots):
+        img2=Image.fromarray(arr.copy()); d2=ImageDraw.Draw(img2)
+        rx=RX
+        d2.rectangle([(rx,AY),(W-12,AB)],fill=C["cbg"])
+        d2.rectangle([(rx,AY),(W-12,AY+BAR)],fill=C["tbar"])
+        for cx2,col in [(rx+13,"#FF5F57"),(rx+29,"#FEBC2E"),(rx+45,"#28C840")]:
+            d2.ellipse([(cx2-5,AY+16),(cx2+5,AY+26)],fill=col)
+        d2.text((rx+60,AY+10),tool,font=_f(22,True),fill=(210,180,128))
+        y2=AY+BAR+PAD
+        d2.rectangle([(rx+PAD,y2),(W-22,y2+LBL)],fill=C["lbl"])
+        d2.text((rx+PAD+7,y2+4),"✏️  你輸入的指令",font=_f(15),fill=C["lblf"])
+        y2+=LBL+6
+        d2.rectangle([(rx+PAD,y2),(W-22,y2+PH)],fill=C["pbg"],outline="#9ED09E",width=2)
+        py2=y2+8
+        for line in sp.split("\n"):
+            for wl in (textwrap.wrap(line,width=32) or [line]):
+                d2.text((rx+PAD+8,py2),wl,font=_f(20),fill=C["pfg"]); py2+=29
+        y2+=PH+PAD
+        d2.rectangle([(rx+PAD,y2),(W-22,y2+LBL)],fill=C["lbl"])
+        d2.text((rx+PAD+7,y2+4),"🤖  AI 輸出結果",font=_f(15),fill=C["lblf"])
+        y2+=LBL+6
+        ob_h=AB-y2-PAD
+        d2.rectangle([(rx+PAD,y2),(W-22,AB-PAD)],fill=C["obg"],outline="#C8B870",width=2)
+        if dots>=0:
+            dc="●"*dots+"○"*(3-dots)
+            d2.text((rx+PAD+10,y2+10),f"AI 生成中  {dc}",font=_f(24),fill=C["think"])
         else:
-            return win_arr
+            oy=y2+8
+            for line in so.split("\n"):
+                if oy+28>AB-PAD-6: break
+                col=C["acdk2"] if line.startswith(("•","【","✅","⚠️","→","—","📌","💡")) else C["ofg"]
+                d2.text((rx+PAD+10,oy),line[:38],font=_f(20),fill=col); oy+=28
+        d2.rectangle([(rx-2,AY-2),(W-10,AB+2)],outline=C["sep"],width=3)
+        return np.array(img2)
 
-    return VideoClip(frame, duration=total_dur)
+    def tf(t):
+        p=t/td; n=int(p*len(prompt))
+        cur="▋" if int(t/0.5)%2==0 else ""
+        return _R(base_arr,prompt[:n]+cur,"",-2)
 
-# ══════════════════════════════════════════════════════════════════════
-# STEP：打字 → AI思考 → 輸出串流（口說同步）
-# ══════════════════════════════════════════════════════════════════════
-def _step_clip(step: dict, title: str, total: int, total_dur: float) -> VideoClip:
-    """
-    時間段：
-      0%~8%   : 步驟標題出現
-      8%~52%  : Prompt 打字動畫
-      52%~65% : AI 思考中...（轉圈點點）
-      65%~100%: AI 輸出串流
-    """
-    T_TITLE = 0.08
-    T_TYPING = 0.52
-    T_THINK  = 0.65
-    T_OUTPUT = 1.00
+    T_THINK=0.20
+    def of(t):
+        p=t/od
+        if p<T_THINK: return _R(base_arr,prompt,"",int((p/T_THINK)*4)%4)
+        op=(p-T_THINK)/(1-T_THINK); n=int(op*len(out_text))
+        return _R(base_arr,prompt,out_text[:n],-1)
 
-    num     = step.get("num", 1)
-    heading = step.get("heading", "")
-    bullets = step.get("bullets") or []
-    action  = step.get("action_label", "")
-    tool    = step.get("tool_name", "Claude")
-    prompt  = step.get("example_prompt", "").strip()
-    output  = step.get("example_output") or []
-    tip     = step.get("tip", "")
-    output_text = "\n".join(output)
+    tc=VideoClip(tf,duration=td); oc=VideoClip(of,duration=od)
+    if Path(type_audio).exists(): tc=tc.set_audio(AudioFileClip(type_audio))
+    if Path(out_audio).exists():  oc=oc.set_audio(AudioFileClip(out_audio))
+    return concatenate_videoclips([tc,oc],method="compose")
 
-    # ── 預算靜態左側 ──
-    def _left(img: Image.Image, draw: ImageDraw.Draw):
-        draw.rectangle([(0,TOP_H),(LEFT_W+18,H-BOT_H)], fill=C["left_bg"])
-        draw.rectangle([(SEP_X-2,TOP_H),(SEP_X+2,H-BOT_H)], fill=C["sep"])
-        # 編號圓
-        cx,cy,r = 80,TOP_H+68,42
-        draw.ellipse([(cx-r,cy-r),(cx+r,cy+r)], fill=C["accent"])
-        nw = draw.textlength(str(num), font=_f(44,True))
-        draw.text((cx-nw//2,cy-26), str(num), font=_f(44,True), fill=(255,255,255))
-        # 標題
-        fh = _f(56,True)
-        hw = draw.textlength(heading, font=fh)
-        fh = _f(44,True) if hw > LEFT_W-44 else fh
-        draw.text((36, TOP_H+126), heading, font=fh, fill=C["head"])
-        # 橫線
-        draw.rectangle([(36,TOP_H+202),(LEFT_W-10,TOP_H+206)], fill=C["sep"])
-        # Bullets
-        y = TOP_H+228
-        for i, b in enumerate(bullets[:3]):
-            iw = draw.textlength(f"0{i+1}", font=_f(18,True))
-            draw.rectangle([(36,y+2),(36+36,y+36)], fill=C["accent"])
-            draw.text((36+(36-iw)//2, y+8), f"0{i+1}", font=_f(18,True), fill=(255,255,255))
-            draw.text((82, y+4), b[:18], font=_f(32), fill=C["body"])
-            y += 62
-        # Tip
-        if tip and y < H-BOT_H-72:
-            draw.rectangle([(28,y+12),(LEFT_W-8,y+60)],
-                           fill=C["accent_dk"])
-            draw.text((44, y+20), f"💡 {tip[:26]}", font=_f(26), fill=(255,220,150))
+# ── CTA ──────────────────────────────────────────────
+def _cta_clip(title,cta_audio):
+    dur=_audio_dur(cta_audio)
+    img=Image.new("RGB",(W,H),C["bg"]); d=ImageDraw.Draw(img)
+    _top(d,title); _bot(d)
+    d.rectangle([(110,H//2-3),(W-110,H//2+1)],fill=C["sep"])
+    for txt,sz,bold,yo in [
+        ("🔔  訂閱 Vivi AI研習社，每週更新職場 AI 實戰",50,True,-68),
+        ("👇  留言你想學的工具，我下週教你",40,False,28),
+    ]:
+        tw=d.textlength(txt,font=_f(sz,bold))
+        d.text(((W-tw)//2,H//2+yo),txt,font=_f(sz,bold),fill=C["hd"] if bold else C["bd"])
+    arr=np.array(img)
+    clip=VideoClip(lambda t:arr,duration=dur)
+    if Path(cta_audio).exists(): clip=clip.set_audio(AudioFileClip(cta_audio))
+    return clip
 
-    # 預渲染左側 base（不含右側動態內容）
-    _base_img = Image.new("RGB",(W,H), C["bg"])
-    _base_draw = ImageDraw.Draw(_base_img)
-    _top(_base_draw, title)
-    _bot(_base_draw, action, num, total)
-    _left(_base_img, _base_draw)
-    _base_arr = np.array(_base_img)
+# ── 主入口 ────────────────────────────────────────────
+def render_tutorial_video(segments:dict, steps:list,
+                          title:str="", output:str="video_final.mp4") -> str:
+    print(f"  🎬 渲染：{title}")
+    pain_pts=steps[0].get("pain_points",[]) if steps else []
+    win_pts =steps[0].get("win_points",[])  if steps else []
 
-    # ── 右側 Chat 面板（固定部分）──
-    CHAT_TOP = AREA_TOP
-    CHAT_H   = AREA_H
-    CHAT_PAD = 18
-    BAR_H    = 48
-    LBL_H    = 30
+    clips=[]
+    clips.append(_hook_clip(pain_pts,win_pts,title,
+                            segments.get("pain",""),segments.get("win","")))
+    print("  ✅ Hook")
+    for i,step in enumerate(steps,1):
+        clips.append(_step_clip(step,title,len(steps),
+                                segments.get(f"step{i}_type",""),
+                                segments.get(f"step{i}_out","")))
+        print(f"  ✅ Step {i}")
+    clips.append(_cta_clip(title,segments.get("cta","")))
+    print("  ✅ CTA")
 
-    # Prompt 文字 wrap
-    prompt_lines = []
-    for seg in prompt.split("\n"):
-        prompt_lines += textwrap.wrap(seg, width=36) or [""]
-    PROMPT_LINE_H = 32
-    PROMPT_BOX_H  = max(len(prompt_lines)*PROMPT_LINE_H + 20, 80)
-
-    # Output 文字 wrap
-    out_lines_all = []
-    for line in output:
-        out_lines_all += textwrap.wrap(line, width=34) or [""]
-
-    OUT_START_Y = (CHAT_TOP + BAR_H + CHAT_PAD + LBL_H + 6 +
-                   PROMPT_BOX_H + CHAT_PAD + LBL_H + 6)
-    OUT_AVAIL   = H - BOT_H - 6 - OUT_START_Y - CHAT_PAD
-    OUT_LINE_H  = 31
-    MAX_OUT_LINES = max(1, OUT_AVAIL // OUT_LINE_H)
-
-    def _draw_right(arr: np.ndarray, shown_prompt: str, shown_output: str,
-                    thinking_dots: int) -> np.ndarray:
-        img  = Image.fromarray(arr.copy())
-        draw = ImageDraw.Draw(img)
-        rx   = RIGHT_X
-
-        # Chat 背景
-        draw.rectangle([(rx, CHAT_TOP),(W-16, H-BOT_H-6)], fill=C["chat_bg"])
-        # Tool bar
-        draw.rectangle([(rx, CHAT_TOP),(W-16, CHAT_TOP+BAR_H)], fill=C["tool_bar"])
-        for cx,col in [(rx+16,"#FF5F57"),(rx+34,"#FEBC2E"),(rx+52,"#28C840")]:
-            draw.ellipse([(cx-6,CHAT_TOP+18),(cx+6,CHAT_TOP+28)], fill=col)
-        draw.text((rx+70, CHAT_TOP+12), tool, font=_f(26,True), fill=(215,190,140))
-
-        y = CHAT_TOP + BAR_H + CHAT_PAD
-
-        # Prompt label
-        draw.rectangle([(rx+CHAT_PAD, y),(W-28, y+LBL_H)], fill=C["lbl_bg"])
-        draw.text((rx+CHAT_PAD+8, y+5), "✏️  你輸入的指令", font=_f(18), fill=C["lbl_fg"])
-        y += LBL_H + 6
-
-        # Prompt box
-        draw.rectangle([(rx+CHAT_PAD, y),(W-28, y+PROMPT_BOX_H)],
-                       fill=C["prompt_bg"], outline="#9ED09E", width=2)
-        py = y + 10
-        for line in shown_prompt.split("\n")[:int((PROMPT_BOX_H-20)/PROMPT_LINE_H)+1]:
-            for wl in textwrap.wrap(line, width=36) or [line]:
-                draw.text((rx+CHAT_PAD+10, py), wl, font=_f(23), fill=C["prompt_fg"])
-                py += PROMPT_LINE_H
-        y += PROMPT_BOX_H + CHAT_PAD
-
-        # Output label
-        draw.rectangle([(rx+CHAT_PAD, y),(W-28, y+LBL_H)], fill=C["lbl_bg"])
-        draw.text((rx+CHAT_PAD+8, y+5), "🤖  AI 輸出結果", font=_f(18), fill=C["lbl_fg"])
-        y += LBL_H + 6
-
-        # Output box
-        out_box_h = H - BOT_H - 6 - y - CHAT_PAD
-        draw.rectangle([(rx+CHAT_PAD, y),(W-28, y+out_box_h)],
-                       fill=C["out_bg"], outline="#C8B878", width=2)
-
-        if thinking_dots >= 0:
-            dots = "●" * thinking_dots + "○" * (3 - thinking_dots)
-            draw.text((rx+CHAT_PAD+12, y+12),
-                      f"AI 思考中  {dots}", font=_f(28), fill=C["thinking"])
-        else:
-            oy = y + 10
-            for line in shown_output.split("\n"):
-                if oy + OUT_LINE_H > y + out_box_h - 8: break
-                col = C["accent_dk"] if line.startswith(("•","【","✅","⚠️","→","—")) else C["out_fg"]
-                draw.text((rx+CHAT_PAD+12, oy), line[:38], font=_f(23), fill=col)
-                oy += OUT_LINE_H
-
-        # 外框
-        draw.rectangle(
-            [(rx-2, CHAT_TOP-2),(W-14, H-BOT_H-4)],
-            outline=C["sep"], width=3)
-
-        return np.array(img)
-
-    def frame(t: float) -> np.ndarray:
-        p = t / total_dur
-
-        if p < T_TITLE:
-            # 步驟標題進場（只有左側，右側空白）
-            img  = Image.fromarray(_base_arr.copy())
-            draw = ImageDraw.Draw(img)
-            draw.rectangle([(RIGHT_X, CHAT_TOP),(W-16, H-BOT_H-6)], fill=C["chat_bg"])
-            draw.rectangle([(RIGHT_X-2,CHAT_TOP-2),(W-14,H-BOT_H-4)], outline=C["sep"], width=3)
-            draw.text((RIGHT_X+60, AREA_TOP+60), f"Step {num}：{heading}",
-                      font=_f(48,True), fill=C["accent"])
-            draw.text((RIGHT_X+60, AREA_TOP+130), "準備開始…",
-                      font=_f(36), fill=C["thinking"])
-            return np.array(img)
-
-        elif p < T_TYPING:
-            # 打字動畫
-            typing_p = (p - T_TITLE) / (T_TYPING - T_TITLE)
-            n = int(typing_p * len(prompt))
-            shown = prompt[:n]
-            # 閃爍游標（每0.6秒閃一次）
-            if int(t / 0.6) % 2 == 0:
-                shown += "▋"
-            return _draw_right(_base_arr, shown, "", -2)
-
-        elif p < T_THINK:
-            # 完整 prompt，AI思考動畫
-            dots = int(((p - T_TYPING) / (T_THINK - T_TYPING)) * 4) % 4
-            return _draw_right(_base_arr, prompt, "", dots)
-
-        else:
-            # 輸出串流
-            out_p = (p - T_THINK) / (T_OUTPUT - T_THINK)
-            n = int(out_p * len(output_text))
-            shown_out = output_text[:n]
-            return _draw_right(_base_arr, prompt, shown_out, -1)
-
-    return VideoClip(frame, duration=total_dur)
-
-# ══════════════════════════════════════════════════════════════════════
-# CTA
-# ══════════════════════════════════════════════════════════════════════
-def _cta_clip(title: str, dur: float) -> VideoClip:
-    img  = Image.new("RGB",(W,H), C["bg"])
-    draw = ImageDraw.Draw(img)
-    _top(draw, title)
-    _bot(draw)
-    draw.rectangle([(120, H//2-3),(W-120,H//2+1)], fill=C["sep"])
-    lines = ["🔔 訂閱 Vivi AI研習社", "每週更新 AI 職場實戰技巧"]
-    y = H//2 - 90
-    for i,l in enumerate(lines):
-        lw = draw.textlength(l, font=_f(60 if i==0 else 44, i==0))
-        draw.text(((W-lw)//2, y), l, font=_f(60 if i==0 else 44, i==0),
-                  fill=C["head"] if i==0 else C["body"])
-        y += 90
-    y += 20
-    sub = "👇 留言你的問題，我都會回覆"
-    sw = draw.textlength(sub, font=_f(38))
-    draw.text(((W-sw)//2, y), sub, font=_f(38), fill=C["accent"])
-    arr = np.array(img)
-    return VideoClip(lambda t: arr, duration=dur)
-
-# ══════════════════════════════════════════════════════════════════════
-# 主渲染入口
-# ══════════════════════════════════════════════════════════════════════
-def render_tutorial_video(audio_path: str, steps: list, screenshots: dict,
-                          title: str = "", output: str = "video_final.mp4") -> str:
-    print(f"  音頻：{audio_path}")
-    audio     = AudioFileClip(audio_path)
-    total_dur = audio.duration
-    print(f"  時長：{total_dur:.1f}s  步驟：{len(steps)}")
-
-    n      = len(steps) or 3
-    hook_d = min(28.0, total_dur * 0.20)
-    cta_d  = min(12.0, total_dur * 0.10)
-    step_d = (total_dur - hook_d - cta_d) / n
-    clips  = []
-
-    # ── Hook ──
-    pain_lines = steps[0].get("pain_points") or []
-    win_lines  = steps[0].get("win_points")  or []
-    if not pain_lines:
-        pain_lines = ["花了30分鐘寫 Email，對方一句話否定",
-                      "會議記錄整理2小時，重點還是漏掉",
-                      "不知道怎麼下指令，AI 的輸出很雞肋"]
-    if not win_lines:
-        win_lines  = ["30秒內產出專業 Email 草稿",
-                      "會議記錄自動整理成重點＋待辦",
-                      "學會 Prompt 技巧，AI 輸出精準有用"]
-    clips.append(_hook_clip(pain_lines, win_lines, title,
-                            steps[0].get("narration",""), hook_d))
-    print(f"  Hook: {hook_d:.1f}s")
-
-    # ── Steps ──
-    for step in steps:
-        clips.append(_step_clip(step, title, n, step_d))
-        print(f"  Step {step.get('num')}: {step_d:.1f}s  "
-              f"prompt={len(step.get('example_prompt',''))}chars  "
-              f"output={len(step.get('example_output',[]))}lines")
-
-    # ── CTA ──
-    clips.append(_cta_clip(title, cta_d))
-    print(f"  CTA: {cta_d:.1f}s")
-
-    video = concatenate_videoclips(clips, method="compose")
-    video = video.set_audio(audio)
-    video.write_videofile(output, fps=FPS, codec="libx264",
-                          audio_codec="aac", preset="fast", logger=None)
-    size = Path(output).stat().st_size // (1024*1024)
-    print(f"  ✅ 完成：{output} ({size} MB)")
+    final=concatenate_videoclips(clips,method="compose")
+    final.write_videofile(output,fps=FPS,codec="libx264",
+                          audio_codec="aac",preset="fast",logger=None)
+    dur=sum(c.duration for c in clips)
+    size=Path(output).stat().st_size//(1024*1024)
+    print(f"  ✅ {output} | {dur:.0f}s | {size} MB")
     return output
