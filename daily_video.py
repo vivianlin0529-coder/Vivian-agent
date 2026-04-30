@@ -415,44 +415,41 @@ def capture_screenshots(steps: list) -> dict:
     return screenshots
 
 # ═══════════════════════════════════════════
-# 語音生成（Google Cloud TTS）
-# ✅ 修改：優先嘗試 Neural2（最自然），fallback 到 Wavenet
+# 語音生成（Microsoft Edge TTS — 免費台灣女聲）
+# 主聲：zh-TW-HsiaoChenNeural（小陳，親切自然）
+# 備用：zh-TW-HsiaoYuNeural（小玉）
 # ═══════════════════════════════════════════
 def generate_voice(narration: str, output: str = "voice.mp3") -> str:
-    print("🎙️ 生成語音（Google Cloud TTS）...")
+    import asyncio
+    import edge_tts
 
-    url = f"https://texttospeech.googleapis.com/v1/text:synthesize?key={GOOGLE_TTS_KEY}"
+    print("🎙️ 生成語音（Microsoft Edge TTS）...")
 
-    # ✅ Neural2 是目前最接近真人的 Google TTS 引擎
-    # cmn-TW-Neural2-A = 台灣國語女聲（Neural2）
-    # 若 Neural2 不可用，fallback 到 Wavenet-A
     voice_candidates = [
-        {"languageCode": "cmn-TW", "name": "cmn-TW-Neural2-A", "ssmlGender": "FEMALE"},
-        {"languageCode": "cmn-TW", "name": "cmn-TW-Wavenet-A", "ssmlGender": "FEMALE"},
+        "zh-TW-HsiaoChenNeural",   # 台灣女聲，親切自然
+        "zh-TW-HsiaoYuNeural",     # 台灣女聲，備用
+        "zh-TW-YunJheNeural",      # 台灣男聲，最後備用
     ]
 
+    async def _synthesize(voice: str, path: str):
+        communicate = edge_tts.Communicate(
+            text=narration,
+            voice=voice,
+            rate="+0%",    # 正常語速
+            volume="+0%",  # 正常音量
+        )
+        await communicate.save(path)
+
     for voice in voice_candidates:
-        payload = {
-            "input": {"text": narration},
-            "voice": voice,
-            "audioConfig": {
-                "audioEncoding": "MP3",
-                "speakingRate": 1.0,   # ✅ 調回正常語速（原 1.05 偏快）
-                "pitch": 0.0,          # ✅ 自然音調
-                "effectsProfileId": ["headphone-class-device"],  # ✅ 提升音質
-            },
-        }
         try:
-            resp = _safe_post(url, headers={"Content-Type": "application/json"}, json_body=payload)
-            audio_bytes = base64.b64decode(resp.json()["audioContent"])
-            with open(output, "wb") as f:
-                f.write(audio_bytes)
-            print(f"  ✅ 語音：{output} | 引擎：{voice['name']} ({Path(output).stat().st_size // 1024} KB)")
+            asyncio.run(_synthesize(voice, output))
+            size_kb = Path(output).stat().st_size // 1024
+            print(f"  ✅ 語音：{output} | 聲音：{voice} ({size_kb} KB)")
             return output
         except Exception as e:
-            print(f"  ⚠️ {voice['name']} 失敗：{e}，嘗試下一個...")
+            print(f"  ⚠️ {voice} 失敗：{e}，嘗試下一個...")
 
-    raise RuntimeError("所有 TTS 語音引擎均失敗")
+    raise RuntimeError("所有 Edge TTS 聲音均失敗")
 
 # ═══════════════════════════════════════════
 # 影片渲染（16:9 教學圖卡）
