@@ -13,7 +13,7 @@ import re, textwrap
 import numpy as np
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
-from moviepy import AudioFileClip, VideoClip, ImageClip, concatenate_videoclips
+from moviepy.editor import AudioFileClip, VideoClip, ImageClip, concatenate_videoclips
 
 # ── 尺寸與配色 ───────────────────────────────────────────────────────────
 
@@ -320,7 +320,7 @@ def render_tutorial_video(
 
     # ── 合成 ──
     video = concatenate_videoclips(clips, method="compose")
-    video = video.with_audio(audio)
+    video = video.set_audio(audio)
 
     print(f"  輸出：{output}")
     video.write_videofile(
