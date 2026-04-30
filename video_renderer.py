@@ -14,7 +14,7 @@ import re
 import numpy as np
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
-from moviepy import AudioFileClip, ImageClip, concatenate_videoclips
+from moviepy import AudioFileClip, VideoClip, ImageClip, concatenate_videoclips
 
 # ── 品牌視覺 ────────────────────────────────────────────────────────────
 
@@ -143,8 +143,8 @@ def _fade_frame(base: np.ndarray, t: float, duration: float,
     return blended.astype(np.uint8)
 
 
-def _make_clip_with_fade(lines: list[str], duration: float) -> ImageClip:
-    """回傳帶淡入淡出的 ImageClip。"""
+def _make_clip_with_fade(lines: list[str], duration: float) -> VideoClip:
+    """回傳帶淡入淡出的 VideoClip（moviepy 2.x 相容）。"""
     base = _make_card_image(lines)
 
     def make_frame(t: float) -> np.ndarray:
@@ -154,7 +154,7 @@ def _make_clip_with_fade(lines: list[str], duration: float) -> ImageClip:
             return _fade_frame(base, duration - t, FADE_DURATION, fade_in=False)
         return base
 
-    clip = ImageClip(make_frame, duration=duration)
+    clip = VideoClip(make_frame, duration=duration)
     return clip
 
 
