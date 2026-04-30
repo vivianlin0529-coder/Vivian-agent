@@ -6,27 +6,41 @@ Vivi AI研習社 — 每日影片自動生產流程
 + 腳本生成 → 語音 → 影片渲染 → YouTube 上傳
 """
 
-import os, re, json, datetime, base64, time, numpy as np
+import os, re, json, datetime, base64, time, pickle
 from pathlib import Path
 import requests
 from google import genai as genai_sdk
-from PIL import Image, ImageDraw, ImageFont
-from moviepy import AudioFileClip, ImageClip, concatenate_videoclips
-from video_renderer import render_animated_video
+from google.genai import types as genai_types
 
 # ── 環境變數 ──────────────────────────────
 
 GEMINI_KEY       = os.getenv("GEMINI_API_KEY", "")
 ELEVENLABS_KEY   = os.getenv("ELEVENLABS_API_KEY", "")
-ELEVENLABS_VOICE = os.getenv("ELEVENLABS_VOICE_ID", "sk_34c3df4a2cf2066bf3cde61027a23715f48a28e1d5e08380")
+ELEVENLABS_VOICE = os.getenv("ELEVENLABS_VOICE_ID", "")   # 格式如 21m00Tcm4TlvDq8ikWAM
 YOUTUBE_API_KEY  = os.getenv("YOUTUBE_API_KEY", "")
 NOTION_TOKEN     = os.getenv("NOTION_TOKEN", "")
 NOTION_VIDEO_DB  = os.getenv("NOTION_VIDEO_DB", "")
 
+# GitHub Actions：從 base64 secret 還原 YouTube token
+_yt_b64 = os.getenv("YOUTUBE_TOKEN_B64", "")
+if _yt_b64:
+    with open("token.pickle", "wb") as _f:
+        _f.write(base64.b64decode(_yt_b64))
+
+# ── 驗證必要變數 ──────────────────────────
+
+def _require(name: str, value: str):
+    if not value:
+        raise EnvironmentError(f"❌ 缺少環境變數：{name}")
+
+_require("GEMINI_API_KEY",    GEMINI_KEY)
+_require("ELEVENLABS_API_KEY", ELEVENLABS_KEY)
+_require("ELEVENLABS_VOICE_ID", ELEVENLABS_VOICE)
+
 # ── Gemini 初始化 ─────────────────────────
+
 gemini = genai_sdk.Client(api_key=GEMINI_KEY)
 GEMINI_MODEL = "gemini-2.5-flash"
-
 
 # ── 品牌視覺設定 ──────────────────────────
 
@@ -36,8 +50,65 @@ BRAND_COLOR  = (180, 100, 60)
 WIDTH, HEIGHT = 1080, 1920
 LINE_CHARS    = 14
 
+
+# ── 共用工具 ──────────────────────────────
+
+def _gemini_json(prompt: str, use_search: bool = False, array: bool = False):
+    """呼叫 Gemini，自動重試，回傳 dict 或 list。"""
+    config_kwargs = {
+        "response_mime_type": "application/json",
+    }
+    if use_search:
+        config_kwargs["tools"] = [genai_types.Tool(google_search=genai_types.GoogleSearch())]
+        # 啟用 google_search 時不可同時指定 response_mime_type（API 限制）
+        config_kwargs.pop("response_mime_type", None)
+
+    config = genai_types.GenerateContentConfig(**config_kwargs)
+
+    for attempt in range(3):
+        try:
+            msg = gemini.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+                config=config,
+            )
+            text = msg.text
+            pattern = r'\[[\s\S]+\]' if array else r'\{[\s\S]+\}'
+            match = re.search(pattern, text)
+            if match:
+                return json.loads(match.group())
+            return [] if array else {}
+        except Exception as e:
+            print(f"  ⚠️ Gemini 第 {attempt+1} 次失敗：{e}")
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+    return [] if array else {}
+
+
+def _safe_post(url: str, *, headers: dict, json_body: dict = None,
+               data: bytes = None, timeout: int = 60) -> requests.Response:
+    """帶重試的 POST。"""
+    for attempt in range(3):
+        try:
+            resp = requests.post(
+                url,
+                headers=headers,
+                json=json_body,
+                data=data,
+                timeout=timeout,
+            )
+            resp.raise_for_status()
+            return resp
+        except requests.RequestException as e:
+            print(f"  ⚠️ 請求第 {attempt+1} 次失敗：{e}")
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+            else:
+                raise
+
+
 # ═══════════════════════════════════════════
-# 任務一：對標帳號研究
+# 任務一：對標帳號研究（啟用 Google Search grounding）
 # ═══════════════════════════════════════════
 
 def research_benchmark_accounts() -> dict:
@@ -47,7 +118,7 @@ def research_benchmark_accounts() -> dict:
 你是 Vivi AI研習社的內容策略師。Vivi 是台灣非工科出身的職場 PM，
 YouTube 頻道定位：AI 工具教學 × 職場效率 × 普通人也能用。
 
-請列出 AI 工具教學 & AI 變現領域的對標帳號：
+請用 Google 搜尋，列出 AI 工具教學 & AI 變現領域的真實對標帳號：
 
 **英文帳號（3個）：**
 選訂閱數 10 萬以上、內容以「非工程師也能用 AI」或「AI 副業」為主的帳號。
@@ -63,13 +134,10 @@ YouTube 頻道定位：AI 工具教學 × 職場效率 × 普通人也能用。
   "japanese": [{"name":"...", "url":"...", "positioning":"...", "sample_video":"..."}, ...]
 }
 """
-    msg = gemini.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-    text = msg.text
-    try:
-        json_match = re.search(r'\{[\s\S]+\}', text)
-        return json.loads(json_match.group()) if json_match else {"english": [], "japanese": [], "raw": text}
-    except Exception:
-        return {"english": [], "japanese": [], "raw": text}
+    result = _gemini_json(prompt, use_search=True)
+    print(f"  找到英文帳號：{len(result.get('english', []))} 個")
+    print(f"  找到日文帳號：{len(result.get('japanese', []))} 個")
+    return result
 
 
 # ═══════════════════════════════════════════
@@ -81,7 +149,8 @@ def analyze_viral_topics(manual_topic: str = "") -> list:
 
     if manual_topic:
         print(f"  使用指定選題：{manual_topic}")
-        return [{"title": manual_topic, "score": 10, "keyword": manual_topic, "appeal": "用戶指定", "algorithm": "手動選題"}]
+        return [{"title": manual_topic, "score": 10, "keyword": manual_topic,
+                 "appeal": "用戶指定", "algorithm": "手動選題", "reason": "手動指定"}]
 
     prompt = """
 根據 2025-2026 最新 AI 趨勢，針對台灣非技術背景上班族，
@@ -100,7 +169,7 @@ def analyze_viral_topics(manual_topic: str = "") -> list:
 4. 主要關鍵字（用於 YouTube 搜尋）
 5. 綜合評分（1-10）+ 評分理由
 
-輸出 JSON：
+輸出 JSON 陣列：
 [
   {
     "title": "...",
@@ -109,20 +178,16 @@ def analyze_viral_topics(manual_topic: str = "") -> list:
     "keyword": "...",
     "score": 9,
     "reason": "..."
-  },
-  ...
+  }
 ]
 """
-    msg = gemini.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-    text = msg.text
-    try:
-        json_match = re.search(r'\[[\s\S]+\]', text)
-        topics = json.loads(json_match.group()) if json_match else []
-        topics.sort(key=lambda x: x.get("score", 0), reverse=True)
-        return topics
-    except Exception:
-        return [{"title": "非工程師用 AI 做出副業的完整流程", "score": 9,
-                 "keyword": "AI副業 非工程師", "appeal": "貼近大眾痛點", "algorithm": "搜尋量高"}]
+    topics = _gemini_json(prompt, array=True)
+    if not topics:
+        topics = [{"title": "非工程師用 AI 做出副業的完整流程", "score": 9,
+                   "keyword": "AI副業 非工程師", "appeal": "貼近大眾痛點",
+                   "algorithm": "搜尋量高", "reason": "fallback"}]
+    topics.sort(key=lambda x: x.get("score", 0), reverse=True)
+    return topics
 
 
 # ═══════════════════════════════════════════
@@ -135,39 +200,44 @@ def search_youtube_videos(keyword: str, max_results: int = 5) -> list:
         print("  ⚠️ 未設定 YOUTUBE_API_KEY，跳過搜尋")
         return []
 
-    url = "https://www.googleapis.com/youtube/v3/search"
-    params = {
-        "part": "snippet",
-        "q": keyword,
-        "type": "video",
-        "order": "viewCount",
-        "maxResults": max_results * 2,
-        "regionCode": "TW",
-        "relevanceLanguage": "zh-Hant",
-        "key": YOUTUBE_API_KEY
-    }
-    resp = requests.get(url, params=params)
-    items = resp.json().get("items", [])
+    search_resp = requests.get(
+        "https://www.googleapis.com/youtube/v3/search",
+        params={
+            "part": "snippet",
+            "q": keyword,
+            "type": "video",
+            "order": "viewCount",
+            "maxResults": max_results * 2,
+            "regionCode": "TW",
+            "relevanceLanguage": "zh-Hant",
+            "key": YOUTUBE_API_KEY,
+        },
+        timeout=20,
+    )
+    search_resp.raise_for_status()
+    items = search_resp.json().get("items", [])
+    if not items:
+        return []
 
-    # 取得播放量
     video_ids = ",".join([i["id"]["videoId"] for i in items])
     stats_resp = requests.get(
         "https://www.googleapis.com/youtube/v3/videos",
-        params={"part": "statistics,snippet", "id": video_ids, "key": YOUTUBE_API_KEY}
+        params={"part": "statistics,snippet", "id": video_ids, "key": YOUTUBE_API_KEY},
+        timeout=20,
     )
+    stats_resp.raise_for_status()
     stats_map = {v["id"]: v for v in stats_resp.json().get("items", [])}
 
     videos = []
     for item in items[:max_results]:
         vid_id = item["id"]["videoId"]
-        stat = stats_map.get(vid_id, {})
-        stats = stat.get("statistics", {})
+        stat   = stats_map.get(vid_id, {})
+        stats  = stat.get("statistics", {})
         snippet = stat.get("snippet", item.get("snippet", {}))
-        view_count = int(stats.get("viewCount", 0))
         videos.append({
             "title":        snippet.get("title", ""),
             "channel":      snippet.get("channelTitle", ""),
-            "views":        view_count,
+            "views":        int(stats.get("viewCount", 0)),
             "published_at": snippet.get("publishedAt", "")[:10],
             "url":          f"https://www.youtube.com/watch?v={vid_id}",
             "video_id":     vid_id,
@@ -177,45 +247,34 @@ def search_youtube_videos(keyword: str, max_results: int = 5) -> list:
 
 
 def analyze_video_outliers(videos: list, keyword: str) -> list:
-    """用 Claude 分析每部影片的異常值"""
     print("  🤖 分析影片異常值...")
     if not videos:
         return videos
 
-    video_summary = json.dumps([
-        {"title": v["title"], "channel": v["channel"], "views": v["views"], "date": v["published_at"]}
-        for v in videos
-    ], ensure_ascii=False)
+    video_summary = json.dumps(
+        [{"title": v["title"], "channel": v["channel"],
+          "views": v["views"], "date": v["published_at"]} for v in videos],
+        ensure_ascii=False,
+    )
 
     prompt = f"""
 以下是 YouTube 關鍵字「{keyword}」的熱門影片，請分析每部影片播放量為何特別高。
 
 {video_summary}
 
-對每部影片，以 1-2 句話說明異常值原因，例如：
-- 標題用了恐懼感或好奇心缺口
-- 發布時機剛好在某個新聞熱點之後
-- 是第一個報導某個新功能
-- 縮圖設計特別吸睛
-- 頻道本身有大量忠實訂閱者
+對每部影片，以 1-2 句話說明異常值原因（標題用詞、發布時機、縮圖設計、頻道背書等）。
 
 輸出 JSON 陣列，每個元素只有 "title" 和 "outlier_reason" 兩個 key。
 """
-    msg = gemini.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-    text = msg.text
-    try:
-        json_match = re.search(r'\[[\s\S]+\]', text)
-        analyses = json.loads(json_match.group()) if json_match else []
-        analysis_map = {a["title"]: a.get("outlier_reason", "") for a in analyses}
-        for v in videos:
-            v["outlier_reason"] = analysis_map.get(v["title"], "")
-    except Exception:
-        pass
+    analyses = _gemini_json(prompt, array=True)
+    analysis_map = {a["title"]: a.get("outlier_reason", "") for a in analyses}
+    for v in videos:
+        v["outlier_reason"] = analysis_map.get(v["title"], "")
     return videos
 
 
 # ═══════════════════════════════════════════
-# 寫入 Notion
+# 寫入 Notion（欄位型別修正）
 # ═══════════════════════════════════════════
 
 def write_to_notion(videos: list, benchmark: dict, topic_title: str):
@@ -227,28 +286,39 @@ def write_to_notion(videos: list, benchmark: dict, topic_title: str):
     headers = {
         "Authorization": f"Bearer {NOTION_TOKEN}",
         "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
 
     for v in videos:
-        views_str = f"{v['views']:,}" if v['views'] else "N/A"
+        # 日期格式驗證
+        pub_date = v.get("published_at", "")
+        date_prop = {"date": {"start": pub_date}} if pub_date else {"rich_text": []}
+
         page = {
             "parent": {"database_id": NOTION_VIDEO_DB},
             "properties": {
-                "影片標題": {"title": [{"text": {"content": v["title"]}}]},
-                "博主名稱": {"rich_text": [{"text": {"content": v["channel"]}}]},
-                "播放量":   {"rich_text": [{"text": {"content": views_str}}]},
-                "上傳日期": {"rich_text": [{"text": {"content": v["published_at"]}}]},
-                "影片連結": {"url": v["url"]},
-                "異常值分析": {"rich_text": [{"text": {"content": v.get("outlier_reason", "")}}]},
-                "對應選題": {"rich_text": [{"text": {"content": topic_title}}]},
-            }
+                "影片標題":  {"title":     [{"text": {"content": v["title"]}}]},
+                "博主名稱":  {"rich_text": [{"text": {"content": v["channel"]}}]},
+                "播放量":    {"number":    v["views"]},           # ✅ number 欄位，可排序
+                "上傳日期":  date_prop,                           # ✅ date 欄位
+                "影片連結":  {"url":       v["url"]},
+                "異常值分析":{"rich_text": [{"text": {"content": v.get("outlier_reason", "")}}]},
+                "對應選題":  {"rich_text": [{"text": {"content": topic_title}}]},
+            },
         }
-        resp = requests.post("https://api.notion.com/v1/pages", headers=headers, json=page)
-        if resp.status_code == 200:
-            print(f"  ✅ 寫入：{v['title'][:40]}")
-        else:
-            print(f"  ❌ 失敗：{resp.status_code} {resp.text[:100]}")
+        try:
+            resp = requests.post(
+                "https://api.notion.com/v1/pages",
+                headers=headers,
+                json=page,
+                timeout=20,
+            )
+            if resp.status_code == 200:
+                print(f"  ✅ 寫入：{v['title'][:40]}")
+            else:
+                print(f"  ❌ 失敗 {resp.status_code}：{resp.text[:120]}")
+        except requests.RequestException as e:
+            print(f"  ❌ 網路錯誤：{e}")
 
 
 # ═══════════════════════════════════════════
@@ -274,12 +344,8 @@ def generate_script(topic: dict) -> tuple[str, str, str, list]:
 
 請寫一個 60 秒短影片腳本（約 300-330 字），結構：
 1. 勾子（10秒）：用一個具體數字或反直覺的真實結果開場
-   例：「我昨天用 Claude，20 分鐘整理完 3 個月的會議記錄」
 2. 共鳴（5秒）：點出觀眾的痛點，一句話就好
-3. 實際步驟（35秒）：3 個具體可操作的步驟，每步驟要說：
-   - 去哪個工具 / 打開哪個畫面
-   - 輸入什麼指令或做什麼動作
-   - 會得到什麼結果
+3. 實際步驟（35秒）：3 個具體可操作的步驟
 4. 行動呼籲（10秒）：留言區互動問題 + 訂閱 + Vivi 自介
 
 同時輸出：
@@ -295,19 +361,13 @@ def generate_script(topic: dict) -> tuple[str, str, str, list]:
   "tags": ["...", "..."]
 }}
 """
-    msg = gemini.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-    text = msg.text
-    try:
-        json_match = re.search(r'\{[\s\S]+\}', text)
-        data = json.loads(json_match.group()) if json_match else {}
-        return (
-            data.get("script", text),
-            data.get("title", topic["title"]),
-            data.get("description", ""),
-            data.get("tags", ["AI工具", "Vivi AI研習社"])
-        )
-    except Exception:
-        return text, topic["title"], "", ["AI工具", "Vivi AI研習社"]
+    data = _gemini_json(prompt)
+    return (
+        data.get("script", ""),
+        data.get("title", topic["title"]),
+        data.get("description", ""),
+        data.get("tags", ["AI工具", "Vivi AI研習社"]),
+    )
 
 
 # ═══════════════════════════════════════════
@@ -316,15 +376,17 @@ def generate_script(topic: dict) -> tuple[str, str, str, list]:
 
 def generate_voice(script: str, output: str = "voice.mp3") -> str:
     print("🎙️  生成語音（ElevenLabs）...")
+    if not ELEVENLABS_VOICE:
+        raise EnvironmentError("ELEVENLABS_VOICE_ID 未設定")
+
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE}"
     headers = {"xi-api-key": ELEVENLABS_KEY, "Content-Type": "application/json"}
     payload = {
         "text": script,
         "model_id": "eleven_multilingual_v2",
-        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
     }
-    resp = requests.post(url, json=payload, headers=headers)
-    resp.raise_for_status()
+    resp = _safe_post(url, headers=headers, json_body=payload, timeout=120)
     with open(output, "wb") as f:
         f.write(resp.content)
     print(f"  ✅ 語音儲存：{output} ({Path(output).stat().st_size // 1024} KB)")
@@ -332,49 +394,12 @@ def generate_voice(script: str, output: str = "voice.mp3") -> str:
 
 
 # ═══════════════════════════════════════════
-# 影片渲染（字幕卡）
+# 影片渲染（使用 video_renderer，內含動畫字幕）
 # ═══════════════════════════════════════════
 
-def _load_font(size: int):
-    for path in [
-        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",  # Linux (GitHub Actions)
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "C:/Windows/Fonts/msjhbd.ttc",   # Windows
-        "C:/Windows/Fonts/msjh.ttc",
-    ]:
-        if Path(path).exists():
-            try: return ImageFont.truetype(path, size)
-            except: continue
-    return ImageFont.load_default()
-
-def _wrap(text: str, max_chars: int) -> list:
-    lines, cur = [], ""
-    for ch in text:
-        cur += ch
-        if ch in "，。！？、：,!?:" or len(cur) >= max_chars:
-            lines.append(cur.strip())
-            cur = ""
-    if cur.strip(): lines.append(cur.strip())
-    return lines
-
-def _make_card(lines: list, duration: float) -> ImageClip:
-    img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
-    draw = ImageDraw.Draw(img)
-    f72 = _load_font(72); f48 = _load_font(48)
-    brand = "Vivi AI研習社"
-    bw = draw.textlength(brand, font=f48)
-    draw.text(((WIDTH-bw)/2, 120), brand, font=f48, fill=BRAND_COLOR)
-    draw.rectangle([(160, 210), (920, 216)], fill=BRAND_COLOR)
-    lh = 94; th = len(lines) * lh
-    y = (HEIGHT - th) / 2 - 60
-    for line in lines:
-        lw = draw.textlength(line, font=f72)
-        draw.text(((WIDTH-lw)/2, y), line, font=f72, fill=ACCENT_COLOR)
-        y += lh
-    draw.rectangle([(160, HEIGHT-160), (920, HEIGHT-154)], fill=BRAND_COLOR)
-    return ImageClip(np.array(img)).with_duration(duration)
-
 def render_video(audio_path: str, script: str, output: str = "video_final.mp4") -> str:
+    print("🎬 渲染影片...")
+    from video_renderer import render_animated_video
     return render_animated_video(audio_path, script, output)
 
 
@@ -388,7 +413,7 @@ def upload_youtube(video_path: str, title: str, description: str, tags: list) ->
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
     from google.oauth2.credentials import Credentials
-    import pickle
+    from google.auth.transport.requests import Request
 
     creds = None
     if Path("token.pickle").exists():
@@ -396,20 +421,28 @@ def upload_youtube(video_path: str, title: str, description: str, tags: list) ->
             creds = pickle.load(f)
 
     if not creds or not creds.valid:
-        # 在 GitHub Actions 環境無法互動，嘗試 refresh
         if creds and creds.expired and creds.refresh_token:
-            from google.auth.transport.requests import Request
             creds.refresh(Request())
         else:
-            raise Exception("YouTube token 無效，請重新授權後更新 YOUTUBE_TOKEN_B64 secret")
+            raise EnvironmentError(
+                "YouTube token 無效。請在本機執行一次 OAuth 授權，"
+                "再將 token.pickle 的 base64 存為 YOUTUBE_TOKEN_B64 secret。"
+            )
 
     youtube = build("youtube", "v3", credentials=creds)
     body = {
-        "snippet": {"title": title, "description": description, "tags": tags, "categoryId": "28"},
-        "status":  {"privacyStatus": "public"}
+        "snippet": {
+            "title":       title[:100],           # YouTube 標題上限 100 字元
+            "description": description[:5000],
+            "tags":        tags[:500],
+            "categoryId":  "28",                  # Science & Technology
+        },
+        "status": {"privacyStatus": "public"},
     }
-    media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
-    request = youtube.videos().insert(part=",".join(body.keys()), body=body, media_body=media)
+    media   = MediaFileUpload(video_path, chunksize=-1, resumable=True)
+    request = youtube.videos().insert(
+        part=",".join(body.keys()), body=body, media_body=media
+    )
 
     response = None
     while response is None:
@@ -419,6 +452,13 @@ def upload_youtube(video_path: str, title: str, description: str, tags: list) ->
 
     url = f"https://youtu.be/{response['id']}"
     print(f"  ✅ 上傳完成：{url}")
+
+    # 輸出給 GitHub Actions workflow
+    if "GITHUB_OUTPUT" in os.environ:
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"youtube_url={url}\n")
+            f.write(f"video_title={title}\n")
+
     return url
 
 
@@ -427,28 +467,28 @@ def upload_youtube(video_path: str, title: str, description: str, tags: list) ->
 # ═══════════════════════════════════════════
 
 def main():
-    print("\n🚀 Vivi AI研習社 每日影片自動生產流程啟動")
-    print(f"   {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} 台北時間\n")
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    print(f"\n🚀 Vivi AI研習社 每日影片自動生產流程啟動")
+    print(f"   {now} 台北時間\n")
 
     manual_topic = os.getenv("MANUAL_TOPIC", "").strip()
 
     # 任務一：對標帳號研究
     benchmark = research_benchmark_accounts()
-    print(f"  找到英文帳號：{len(benchmark.get('english', []))} 個")
-    print(f"  找到日文帳號：{len(benchmark.get('japanese', []))} 個")
 
     # 任務二：選題分析
     topics = analyze_viral_topics(manual_topic)
-    best = topics[0] if topics else {"title": "AI 工具入門", "keyword": "AI工具", "score": 8}
+    best   = topics[0] if topics else {
+        "title": "AI 工具入門", "keyword": "AI工具", "score": 8,
+        "appeal": "", "algorithm": "", "reason": "fallback",
+    }
     print(f"\n  ⭐ 最高分選題（{best.get('score',0)} 分）：{best['title']}")
-
-    # 列出所有選題
     for i, t in enumerate(topics, 1):
         print(f"  {i}. [{t.get('score',0)}分] {t['title']}")
 
     # 任務三：YouTube 搜尋 + Notion 寫入
-    keyword = best.get("keyword", best["title"])
-    videos = search_youtube_videos(keyword, max_results=5)
+    keyword = best.get("keyword") or best["title"]
+    videos  = search_youtube_videos(keyword, max_results=5)
     if videos:
         videos = analyze_video_outliers(videos, keyword)
         write_to_notion(videos, benchmark, best["title"])
@@ -456,11 +496,16 @@ def main():
     # 生成腳本
     script, title, description, tags = generate_script(best)
 
-    # 儲存 meta
-    meta = {"title": title, "description": description, "tags": tags,
-            "topic": best, "benchmark": benchmark, "reference_videos": videos}
-    with open("video_meta.json", "w", encoding="utf-8") as f:
+    # 儲存 meta（含日期戳，避免覆蓋）
+    date_str  = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+    meta_path = f"video_meta_{date_str}.json"
+    meta = {
+        "title": title, "description": description, "tags": tags,
+        "topic": best, "benchmark": benchmark, "reference_videos": videos,
+    }
+    with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
+    print(f"\n  📄 Meta 儲存：{meta_path}")
 
     # 語音生成
     audio_path = generate_voice(script)
