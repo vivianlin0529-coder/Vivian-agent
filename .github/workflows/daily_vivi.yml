@@ -2,17 +2,25 @@ name: Vivi AI Daily Workflow
 
 on:
   schedule:
-    - cron: '30 0 * * *'  # 台灣時間每天 08:30 (UTC 00:30)
+    - cron: '30 0 * * *'
   workflow_dispatch:
     inputs:
       mode:
-        description: '選擇執行模式'
+        description: '執行模式'
         required: true
         default: 'PREVIEW'
         type: choice
         options:
           - PREVIEW
           - FULL
+      manual_topic:
+        description: '手動指定選題（留空=AI自動選）'
+        required: false
+        default: ''
+      manual_tool:
+        description: '手動指定工具（Claude / ChatGPT / Gamma 等）'
+        required: false
+        default: ''
 
 jobs:
   run-vivi-agent:
@@ -56,6 +64,8 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_VIDEO_DB: ${{ secrets.NOTION_VIDEO_DB }}
           EXECUTION_MODE: ${{ github.event.inputs.mode || 'PREVIEW' }}
+          MANUAL_TOPIC: ${{ github.event.inputs.manual_topic || '' }}
+          MANUAL_TOOL: ${{ github.event.inputs.manual_tool || '' }}
         run: python daily_video.py
 
       - name: Upload Video Artifact
