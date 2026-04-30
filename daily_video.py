@@ -211,199 +211,126 @@ def write_to_notion(videos: list, benchmark: dict, topic_title: str):
 # 腳本生成（結構化教學步驟）
 # ═══════════════════════════════════════════
 def generate_script(topic: dict) -> tuple:
-    print(f"\n✍️ 生成教學腳本：{topic['title']}")
-    tool = topic.get("tool", "Claude")
+    print(f"\n✍️ 生成腳本：{topic['title']}")
+    tool = topic.get("tool","Claude")
     prompt = f"""
-你是 Vivi（台灣職場 AI 頻道主持人），要製作一支給上班族看的 YouTube 教學影片。
-格式：動態打字模擬 + AI 輸出串流，口說與畫面完全同步。
+你是 Vivi，台灣職場 AI 教學 YouTuber。製作一支口說＋畫面完全同步的教學影片。
+選題：{topic['title']}  工具：{tool}
 
-選題：{topic['title']}
-工具：{tool}
+【重要限制】
+- 禁止出現任何中文人名（用「主管」「客戶」「同事」「業務」代替）
+- 每段旁白字數嚴格控制：pain旁白35字內、win旁白35字內、每步typing旁白25字、每步output旁白25字、cta旁白30字
+- Prompt 範本必須直接可用，不能是說明文字
+- 輸出範例要像真實 AI 輸出，有格式、有具體數字/日期/內容
 
-【絕對禁止】
-- 禁止出現任何中文真實人名（用「主管」「同事」「客戶」「業務」代替）
-- 禁止空洞句子（如「非常方便」「超級好用」「改變你的工作方式」）
-- Prompt 範本必須「直接可複製貼用」，不能是說明文字
+【影片結構（共約55秒）】
+- Hook Pain (7s)：說3個職場痛點（口說配信箱爆滿畫面）
+- Hook Win  (7s)：說AI能帶來的3個改變（口說配整理好的輸出畫面）
+- 每步驟 typing (7s)：說「輸入什麼指令」（口說配打字動畫）
+- 每步驟 output (6s)：說「AI給了什麼結果」（口說配輸出串流）
+- CTA (6s)：邀訂閱
 
-【影片結構】
-Hook 28秒：前半痛點，後半成果
-每步驟約30秒：標題→打字動畫→AI輸出
-
-【旁白同步要求】
-- Hook 旁白：先描述痛點，再展示成果
-- 每步旁白：先說「做什麼」（打字階段），再說「AI給了什麼」（輸出階段）
-
-請輸出 JSON：
+輸出 JSON：
 {{
-  "title": "影片標題（含數字＋具體成果，口語，不超過25字）",
-  "description": "YouTube說明欄（含情境、3步驟摘要、適用對象、hashtag）",
+  "title": "影片標題（25字內，含數字＋具體結果）",
+  "description": "說明欄（含工具、情境、3步摘要、hashtag）",
   "tags": ["AI工具","Vivi AI研習社","職場效率"],
-  "hook": "開場旁白（25秒，前半12秒說3個職場痛點，後半13秒說AI能做到什麼，結尾一句引入主題）",
-  "cta": "結尾旁白（12秒，問觀眾問題＋邀訂閱）",
-  "narration": "完整旁白（hook+3步+cta，350字，自然口語，每步包含「輸入什麼」和「得到什麼」的描述）",
-  "pain_points": [
-    "具體痛點1（15字內，真實職場情境，不能有人名）",
-    "具體痛點2（15字內）",
-    "具體痛點3（15字內）"
-  ],
-  "win_points": [
-    "使用AI後的成果1（15字內，具體數字或動作）",
-    "使用AI後的成果2（15字內）",
-    "使用AI後的成果3（15字內）"
-  ],
+  "narration_pain": "痛點旁白（35字，描述3個具體職場痛點，不提人名）",
+  "narration_win":  "成果旁白（35字，說明AI帶來的3個具體改變）",
+  "narration_cta":  "結尾旁白（30字，問一個問題＋邀訂閱）",
+  "pain_points": ["痛點1（15字內）","痛點2（15字內）","痛點3（15字內）","痛點4（15字內）"],
+  "win_points":  ["成果1（15字內）","成果2（15字內）","成果3（15字內）","成果4（15字內）"],
   "steps": [
     {{
       "num": 1,
       "heading": "步驟標題（5字內）",
       "tool_name": "{tool}",
-      "narration": "這步的旁白（40字，前20字說要輸入什麼指令，後20字說AI輸出後能達成什麼效果）",
+      "narration_type": "打字階段旁白（25字，說明輸入什麼指令、為什麼這樣寫）",
+      "narration_out":  "輸出階段旁白（25字，說明AI給了什麼、有什麼用）",
       "url": "https://...",
-      "action_label": "底部提示（18字內）",
-      "bullets": ["動作1（8字內，動詞開頭）","動作2（8字內）","預期成果（8字內）"],
-      "example_prompt": "完整可用的Prompt（含：背景說明\n具體需求\n格式要求\n語氣要求，共4-6行，不含人名）",
-      "example_output": [
-        "（AI實際會輸出的內容，6-9行）",
-        "（第一行用【標題】格式）",
-        "（後續是真實內容，不是說明文字）",
-        "（用•或→標記關鍵項目）",
-        "（包含具體數字、時間、格式）"
-      ],
-      "tip": "進階技巧（14字內）"
+      "action_label": "底部提示（16字內）",
+      "bullets": ["動作1（8字）","動作2（8字）","預期結果（8字）"],
+      "example_prompt": "完整Prompt（可直接貼用，4-5行，含背景+需求+格式+語氣，無人名）",
+      "example_output": ["【AI輸出】","行2","行3","行4","行5","行6","行7"],
+      "tip": "進階技巧（12字內）"
     }},
-    {{"num":2,"heading":"步驟2","tool_name":"{tool}","narration":"旁白","url":"https://...","action_label":"提示","bullets":["動作1","動作2","成果"],"example_prompt":"完整Prompt","example_output":["輸出行1","輸出行2","輸出行3","輸出行4","輸出行5","輸出行6"],"tip":"技巧"}},
-    {{"num":3,"heading":"步驟3","tool_name":"{tool}","narration":"旁白","url":"https://...","action_label":"提示","bullets":["動作1","動作2","成果"],"example_prompt":"完整Prompt","example_output":["輸出行1","輸出行2","輸出行3","輸出行4","輸出行5","輸出行6"],"tip":"技巧"}}
+    {{"num":2,"heading":"步5字","tool_name":"{tool}","narration_type":"25字","narration_out":"25字","url":"https://...","action_label":"16字","bullets":["8字","8字","8字"],"example_prompt":"Prompt","example_output":["行1","行2","行3","行4","行5","行6"],"tip":"12字"}},
+    {{"num":3,"heading":"步5字","tool_name":"{tool}","narration_type":"25字","narration_out":"25字","url":"https://...","action_label":"16字","bullets":["8字","8字","8字"],"example_prompt":"Prompt","example_output":["行1","行2","行3","行4","行5","行6"],"tip":"12字"}}
   ]
 }}
 """
     data  = _gemini_json(prompt)
-    steps = data.get("steps", [])
-    narr  = data.get("narration","")
+    steps = data.get("steps",[])
     title = data.get("title", topic["title"])
     desc  = data.get("description","")
     tags  = data.get("tags",["AI工具","Vivi AI研習社"])
-    hook  = data.get("hook","")
-    cta   = data.get("cta","")
 
-    # 把 pain/win points 注入到 step[0]，供 video_renderer hook 使用
     if steps:
         steps[0]["pain_points"] = data.get("pain_points",[])
         steps[0]["win_points"]  = data.get("win_points",[])
 
-    full_narration = f"{hook}\n{narr}\n{cta}".strip() if hook else narr
+    # 把各段旁白存入 steps 結構方便後續使用
+    narrations = {
+        "pain": data.get("narration_pain",""),
+        "win":  data.get("narration_win",""),
+        "cta":  data.get("narration_cta",""),
+    }
+    for s2 in steps:
+        narrations[f"step{s2['num']}_type"] = s2.get("narration_type","")
+        narrations[f"step{s2['num']}_out"]  = s2.get("narration_out","")
+
     print(f"  步驟：{len(steps)}")
-    for s in steps:
-        print(f"    Step {s.get('num')}: {s.get('heading')} | prompt={len(s.get('example_prompt',''))}字")
-    return full_narration, title, desc, tags, steps
-
-
-# ═══════════════════════════════════════════
-# 截圖擷取（Playwright + Stealth）
-# ✅ 修改：加入 stealth user-agent 繞過 Cloudflare，並設計 fallback 截圖
-# ═══════════════════════════════════════════
-def _make_fallback_screenshot(step: dict, path: str):
-    """當截圖失敗時，生成一張乾淨的說明卡取代"""
-    try:
-        from PIL import Image, ImageDraw, ImageFont
-        import textwrap
-
-        img = Image.new("RGB", (1280, 800), color="#F8F6F2")
-        draw = ImageDraw.Draw(img)
-
-        # 嘗試載入中文字體
-        font_paths = [
-            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/noto-cjk/NotoSansCJKtc-Regular.otf",
-        ]
-        font_url  = None
-        font_head = None
-        for fp in font_paths:
-            if Path(fp).exists():
-                try:
-                    font_url  = ImageFont.truetype(fp, 36)
-                    font_head = ImageFont.truetype(fp, 28)
-                    break
-                except Exception:
-                    pass
-        if font_url is None:
-            font_url  = ImageFont.load_default()
-            font_head = ImageFont.load_default()
-
-        # 繪製內容
-        url   = step.get("url", "")
-        label = step.get("action_label", "")
-        num   = step.get("num", "?")
-
-        draw.rectangle([60, 60, 1220, 740], outline="#D4B896", width=3, fill="#FFFFFF")
-        draw.text((100, 100), f"步驟 {num}：請前往以下網站操作", font=font_head, fill="#5C4A32")
-        draw.text((100, 170), url, font=font_url, fill="#B86B3A")
-
-        # 操作說明自動換行
-        wrapped = textwrap.fill(label, width=50)
-        y = 260
-        for line in wrapped.split("\n"):
-            draw.text((100, y), line, font=font_head, fill="#3D3D3D")
-            y += 50
-
-        draw.text((100, 680), "▶ 請參考左側步驟說明進行操作", font=font_head, fill="#999999")
-        img.save(path)
-        print(f"    📋 已生成說明卡替代截圖：{path}")
-        return True
-    except Exception as e:
-        print(f"    ⚠️ fallback 截圖也失敗：{e}")
-        return False
+    for s2 in steps:
+        print(f"    Step {s2.get('num')}: {s2.get('heading')} | prompt={len(s2.get('example_prompt',''))}字")
+    # 回傳完整旁白（供 TTS 備用）+ steps + narrations dict
+    full = "\n".join(narrations.values())
+    return full, title, desc, tags, steps, narrations
 
 
 def capture_screenshots(steps: list) -> dict:
-    """截圖功能已停用：改用 example_prompt/output 動態渲染"""
-    print("  📌 跳過截圖（使用動態範例渲染）")
+    """已停用：改用動態範例渲染"""
     return {}
 
-# ═══════════════════════════════════════════
-# 語音生成（Microsoft Edge TTS — 免費台灣女聲）
-# 主聲：zh-TW-HsiaoChenNeural（小陳，親切自然）
-# 備用：zh-TW-HsiaoYuNeural（小玉）
-# ═══════════════════════════════════════════
-def generate_voice(narration: str, output: str = "voice.mp3") -> str:
-    import asyncio
-    import edge_tts
-
-    print("🎙️ 生成語音（Microsoft Edge TTS）...")
-
-    voice_candidates = [
-        "zh-TW-HsiaoChenNeural",   # 台灣女聲，親切自然
-        "zh-TW-HsiaoYuNeural",     # 台灣女聲，備用
-        "zh-TW-YunJheNeural",      # 台灣男聲，最後備用
-    ]
-
-    async def _synthesize(voice: str, path: str):
-        communicate = edge_tts.Communicate(
-            text=narration,
-            voice=voice,
-            rate="+0%",    # 正常語速
-            volume="+0%",  # 正常音量
-        )
-        await communicate.save(path)
-
-    for voice in voice_candidates:
-        try:
-            asyncio.run(_synthesize(voice, output))
-            size_kb = Path(output).stat().st_size // 1024
-            print(f"  ✅ 語音：{output} | 聲音：{voice} ({size_kb} KB)")
-            return output
-        except Exception as e:
-            print(f"  ⚠️ {voice} 失敗：{e}，嘗試下一個...")
-
-    raise RuntimeError("所有 Edge TTS 聲音均失敗")
 
 # ═══════════════════════════════════════════
-# 影片渲染（16:9 教學圖卡）
+# 語音生成（分段 TTS，每段對應一個視覺段落）
 # ═══════════════════════════════════════════
-def render_video(audio_path: str, steps: list, screenshots: dict,
+def generate_voice_segments(narrations: dict) -> dict:
+    """為每個旁白段落生成獨立 mp3，回傳 {segment_name: file_path}"""
+    import asyncio, edge_tts
+    VOICE = "zh-TW-HsiaoChenNeural"
+    VOICE2= "zh-TW-HsiaoYuNeural"
+    seg_files = {}
+
+    async def _tts(text, path, voice):
+        comm = edge_tts.Communicate(text=text, voice=voice, rate="+0%", volume="+0%")
+        await comm.save(path)
+
+    for seg_name, text in narrations.items():
+        if not text.strip():
+            continue
+        path = f"seg_{seg_name}.mp3"
+        for voice in [VOICE, VOICE2]:
+            try:
+                asyncio.run(_tts(text, path, voice))
+                size = Path(path).stat().st_size
+                print(f"  ✅ {seg_name}: {path} ({size//1024} KB) [{voice.split('-')[-1]}]")
+                seg_files[seg_name] = path
+                break
+            except Exception as ex:
+                print(f"  ⚠️ {seg_name}/{voice}: {ex}")
+    return seg_files
+
+
+# ═══════════════════════════════════════════
+# 影片渲染（分段音頻版）
+# ═══════════════════════════════════════════
+def render_video(seg_files: dict, steps: list,
                  title: str, output: str = "video_final.mp4") -> str:
-    print("🎬 渲染影片（16:9）...")
+    print("\n🎬 渲染影片（分段同步版）...")
     from video_renderer import render_tutorial_video
-    return render_tutorial_video(audio_path, steps, screenshots, title, output)
+    return render_tutorial_video(seg_files, steps, title, output)
+
 
 # ═══════════════════════════════════════════
 # YouTube 上傳
@@ -470,8 +397,8 @@ def main():
         videos = analyze_video_outliers(videos, keyword)
         write_to_notion(videos, benchmark, best["title"])
 
-    narration, title, description, tags, steps = generate_script(best)
-    screenshots = capture_screenshots(steps)
+    narration, title, description, tags, steps, narrations = generate_script(best)
+    seg_files = generate_voice_segments(narrations)
 
     date_str  = datetime.datetime.now().strftime("%Y%m%d_%H%M")
     meta_path = "video_meta.json" if EXECUTION_MODE == "PREVIEW" else f"video_meta_{date_str}.json"
@@ -482,8 +409,8 @@ def main():
                   f, ensure_ascii=False, indent=2)
     print(f"  📄 Meta 儲存：{meta_path}")
 
-    audio_path = generate_voice(narration)
-    video_path = render_video(audio_path, steps, screenshots, title)
+    # audio generated per-segment above
+    video_path = render_video(seg_files, steps, title)
 
     # ── 關鍵分岔點 ────────────────────────────────────
     if EXECUTION_MODE == "FULL":
