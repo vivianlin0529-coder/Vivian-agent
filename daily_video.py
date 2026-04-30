@@ -1,22 +1,29 @@
 """
 Vivi AI研習社 — 每日影片自動生產流程
 輸出：16:9 YouTube 標準教學影片（步驟圖卡 + 實際截圖）
+
+EXECUTION_MODE:
+  PREVIEW（預設）— 生成影片但不上傳 YouTube，輸出 daily_preview_video.mp4 供確認
+  FULL           — 重新生成並上傳 YouTube
 """
 
-import os, re, json, datetime, base64, time, pickle
+import os, re, json, datetime, base64, time, pickle, shutil
 from pathlib import Path
 import requests
 from google import genai as genai_sdk
 from google.genai import types as genai_types
 
-# ── 環境變數 ──────────────────────────────
+# ── 執行模式 ──────────────────────────────────────────────────────
+EXECUTION_MODE = os.environ.get("EXECUTION_MODE", "PREVIEW").upper()
+print(f"\n⚙️  執行模式：{EXECUTION_MODE}")
 
-GEMINI_KEY      = os.getenv("GEMINI_API_KEY", "")
-GOOGLE_TTS_KEY  = os.getenv("YOUTUBE_API_KEY", "")
-GOOGLE_TTS_VOICE= os.getenv("GOOGLE_TTS_VOICE", "cmn-TW-Wavenet-A")
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")
-NOTION_TOKEN    = os.getenv("NOTION_TOKEN", "")
-NOTION_VIDEO_DB = os.getenv("NOTION_VIDEO_DB", "")
+# ── 環境變數 ──────────────────────────────
+GEMINI_KEY       = os.getenv("GEMINI_API_KEY", "")
+GOOGLE_TTS_KEY   = os.getenv("YOUTUBE_API_KEY", "")
+GOOGLE_TTS_VOICE = os.getenv("GOOGLE_TTS_VOICE", "cmn-TW-Wavenet-A")
+YOUTUBE_API_KEY  = os.getenv("YOUTUBE_API_KEY", "")
+NOTION_TOKEN     = os.getenv("NOTION_TOKEN", "")
+NOTION_VIDEO_DB  = os.getenv("NOTION_VIDEO_DB", "")
 
 # GitHub Actions：從 base64 secret 還原 YouTube token
 _yt_b64 = os.getenv("YOUTUBE_TOKEN_B64", "")
@@ -28,24 +35,20 @@ def _require(name, value):
     if not value:
         raise EnvironmentError(f"❌ 缺少環境變數：{name}")
 
-_require("GEMINI_API_KEY",  GEMINI_KEY)
+_require("GEMINI_API_KEY", GEMINI_KEY)
 _require("YOUTUBE_API_KEY", GOOGLE_TTS_KEY)
 
 # ── Gemini 初始化 ─────────────────────────
-
 gemini = genai_sdk.Client(api_key=GEMINI_KEY)
 GEMINI_MODEL = "gemini-2.5-flash"
 
-
 # ── 共用工具 ──────────────────────────────
-
 def _gemini_json(prompt: str, use_search: bool = False, array: bool = False):
     config_kwargs = {}
     if use_search:
         config_kwargs["tools"] = [genai_types.Tool(google_search=genai_types.GoogleSearch())]
     else:
         config_kwargs["response_mime_type"] = "application/json"
-
     config = genai_types.GenerateContentConfig(**config_kwargs)
     for attempt in range(3):
         try:
@@ -63,7 +66,6 @@ def _gemini_json(prompt: str, use_search: bool = False, array: bool = False):
                 time.sleep(2 ** attempt)
     return [] if array else {}
 
-
 def _safe_post(url, *, headers, json_body=None, timeout=60):
     for attempt in range(3):
         try:
@@ -77,21 +79,16 @@ def _safe_post(url, *, headers, json_body=None, timeout=60):
             else:
                 raise
 
-
 # ═══════════════════════════════════════════
 # 任務一：對標帳號研究
 # ═══════════════════════════════════════════
-
 def research_benchmark_accounts() -> dict:
     print("\n🔍 任務一：搜尋對標帳號...")
     prompt = """
 你是 Vivi AI研習社的內容策略師。請用 Google 搜尋，列出 AI 工具教學 & AI 變現領域的真實對標帳號。
-
 英文帳號（3個）：訂閱數 10 萬以上、以「非工程師也能用 AI」或「AI 副業」為主。
 日文帳號（3個）：近期活躍、主題為「AI活用」「AI副業」。
-
 每個附：帳號名稱、YouTube 頻道 URL、定位一句話、代表影片標題
-
 輸出 JSON：
 {"english":[{"name":"...","url":"...","positioning":"...","sample_video":"..."}],
  "japanese":[{"name":"...","url":"...","positioning":"...","sample_video":"..."}]}
@@ -100,27 +97,22 @@ def research_benchmark_accounts() -> dict:
     print(f"  英文帳號：{len(result.get('english',[]))} 個 / 日文帳號：{len(result.get('japanese',[]))} 個")
     return result
 
-
 # ═══════════════════════════════════════════
 # 任務二：爆款選題分析
 # ═══════════════════════════════════════════
-
 def analyze_viral_topics(manual_topic: str = "") -> list:
     print("\n💡 任務二：爆款選題分析...")
     if manual_topic:
         return [{"title": manual_topic, "score": 10, "keyword": manual_topic,
                  "appeal": "用戶指定", "algorithm": "手動選題", "reason": "手動指定",
                  "tool": "Claude"}]
-
     prompt = """
 針對台灣非技術背景上班族，為「Vivi AI研習社」提供 5 個爆款短影片選題。
-
 每個選題必須：
 - 是「某個 AI 工具的具體操作教學」（例如：用 Claude 整理會議記錄、用 Gamma 做簡報）
 - 有 3 個可截圖示意的操作步驟
 - 60 秒內能說清楚
 - 指定一個主要工具（Claude / Gamma / Notion AI / ChatGPT / Canva AI 等）
-
 輸出 JSON 陣列：
 [{"title":"...","appeal":"...","algorithm":"...","keyword":"...","tool":"...","score":9,"reason":"..."}]
 """
@@ -132,11 +124,9 @@ def analyze_viral_topics(manual_topic: str = "") -> list:
     topics.sort(key=lambda x: x.get("score", 0), reverse=True)
     return topics
 
-
 # ═══════════════════════════════════════════
 # 任務三：YouTube 參考影片搜尋
 # ═══════════════════════════════════════════
-
 def search_youtube_videos(keyword: str, max_results: int = 5) -> list:
     print(f"\n🎥 搜尋 YouTube 參考影片：{keyword}")
     if not YOUTUBE_API_KEY:
@@ -176,7 +166,6 @@ def search_youtube_videos(keyword: str, max_results: int = 5) -> list:
         print(f"  ⚠️ YouTube 搜尋失敗：{e}")
         return []
 
-
 def analyze_video_outliers(videos: list, keyword: str) -> list:
     if not videos:
         return videos
@@ -188,26 +177,25 @@ def analyze_video_outliers(videos: list, keyword: str) -> list:
         v["outlier_reason"] = amap.get(v["title"],"")
     return videos
 
-
 def write_to_notion(videos: list, benchmark: dict, topic_title: str):
     print("\n📝 寫入 Notion...")
     if not NOTION_TOKEN or not NOTION_VIDEO_DB:
         print("  ⚠️ 跳過（未設定 NOTION 環境變數）")
         return
     headers = {"Authorization": f"Bearer {NOTION_TOKEN}",
-               "Notion-Version": "2022-06-28", "Content-Type": "application/json"}
+                "Notion-Version": "2022-06-28", "Content-Type": "application/json"}
     for v in videos:
         pub_date = v.get("published_at","")
         page = {
             "parent": {"database_id": NOTION_VIDEO_DB},
             "properties": {
-                "影片標題":  {"title":     [{"text":{"content": v["title"]}}]},
-                "博主名稱":  {"rich_text": [{"text":{"content": v["channel"]}}]},
-                "播放量":    {"number":    v["views"]},
-                "上傳日期":  {"date":      {"start": pub_date}} if pub_date else {"rich_text":[]},
-                "影片連結":  {"url":       v["url"]},
+                "影片標題": {"title": [{"text":{"content": v["title"]}}]},
+                "博主名稱": {"rich_text": [{"text":{"content": v["channel"]}}]},
+                "播放量": {"number": v["views"]},
+                "上傳日期": {"date": {"start": pub_date}} if pub_date else {"rich_text":[]},
+                "影片連結": {"url": v["url"]},
                 "異常值分析":{"rich_text": [{"text":{"content": v.get("outlier_reason","")}}]},
-                "對應選題":  {"rich_text": [{"text":{"content": topic_title}}]},
+                "對應選題": {"rich_text": [{"text":{"content": topic_title}}]},
             }
         }
         try:
@@ -218,21 +206,14 @@ def write_to_notion(videos: list, benchmark: dict, topic_title: str):
         except Exception as e:
             print(f"  ❌ {e}")
 
-
 # ═══════════════════════════════════════════
 # 腳本生成（結構化教學步驟）
 # ═══════════════════════════════════════════
-
 def generate_script(topic: dict) -> tuple:
-    """
-    回傳 (narration_text, title, description, tags, steps)
-    steps = [{"num":1, "heading":"...", "narration":"...", "url":"...", "action_label":"..."}]
-    """
     print(f"\n✍️ 生成教學腳本：{topic['title']}")
     tool = topic.get("tool", "AI工具")
     prompt = f"""
 你是 Vivi（林怡伶）的 AI 分身，幫她寫 YouTube 教學影片腳本。
-
 選題：{topic['title']}
 主要工具：{tool}
 
@@ -260,52 +241,30 @@ JSON 格式：
       "url": "實際要開啟的網址（必填，如 https://claude.ai）",
       "action_label": "操作說明（顯示在畫面上，如：點「New Chat」→ 貼上文字）"
     }},
-    {{
-      "num": 2,
-      "heading": "步驟標題",
-      "narration": "旁白",
-      "url": "https://...",
-      "action_label": "操作說明"
-    }},
-    {{
-      "num": 3,
-      "heading": "步驟標題",
-      "narration": "旁白",
-      "url": "https://...",
-      "action_label": "操作說明"
-    }}
+    {{"num": 2, "heading": "步驟標題", "narration": "旁白", "url": "https://...", "action_label": "操作說明"}},
+    {{"num": 3, "heading": "步驟標題", "narration": "旁白", "url": "https://...", "action_label": "操作說明"}}
   ],
   "cta": "結尾行動呼籲（10秒，問問題+訂閱）"
 }}
 """
-    data = _gemini_json(prompt)
-    steps   = data.get("steps", [])
-    narr    = data.get("narration", "")
-    title   = data.get("title", topic["title"])
-    desc    = data.get("description", "")
-    tags    = data.get("tags", ["AI工具","Vivi AI研習社"])
-    hook    = data.get("hook", "")
-    cta     = data.get("cta", "")
-
-    # 把 hook + narration + cta 組成完整旁白給 TTS
+    data  = _gemini_json(prompt)
+    steps = data.get("steps", [])
+    narr  = data.get("narration", "")
+    title = data.get("title", topic["title"])
+    desc  = data.get("description", "")
+    tags  = data.get("tags", ["AI工具","Vivi AI研習社"])
+    hook  = data.get("hook", "")
+    cta   = data.get("cta", "")
     full_narration = f"{hook}\n{narr}\n{cta}".strip() if hook else narr
-
     print(f"  步驟數：{len(steps)}")
     for s in steps:
-        print(f"  Step {s.get('num')}: {s.get('heading')} → {s.get('url','')}")
-
+        print(f"    Step {s.get('num')}: {s.get('heading')} → {s.get('url','')}")
     return full_narration, title, desc, tags, steps
-
 
 # ═══════════════════════════════════════════
 # 截圖擷取（Playwright）
 # ═══════════════════════════════════════════
-
 def capture_screenshots(steps: list) -> dict:
-    """
-    對每個 step 的 url 截圖，回傳 {step_num: image_path}
-    失敗則跳過（不影響主流程）
-    """
     print("\n📸 擷取步驟截圖...")
     screenshots = {}
     try:
@@ -313,7 +272,6 @@ def capture_screenshots(steps: list) -> dict:
     except ImportError:
         print("  ⚠️ playwright 未安裝，跳過截圖")
         return screenshots
-
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
@@ -325,7 +283,6 @@ def capture_screenshots(steps: list) -> dict:
             timezone_id="Asia/Taipei",
         )
         page = context.new_page()
-
         for step in steps:
             num = step.get("num")
             url = step.get("url", "")
@@ -335,24 +292,20 @@ def capture_screenshots(steps: list) -> dict:
             try:
                 print(f"  截圖 Step {num}：{url}")
                 page.goto(url, timeout=15000, wait_until="domcontentloaded")
-                page.wait_for_timeout(2000)   # 等待動畫載入
+                page.wait_for_timeout(2000)
                 page.screenshot(path=path, full_page=False)
                 screenshots[num] = path
                 print(f"  ✅ 儲存：{path}")
             except Exception as e:
                 print(f"  ⚠️ Step {num} 截圖失敗：{e}")
-
         browser.close()
-
     return screenshots
-
 
 # ═══════════════════════════════════════════
 # 語音生成（Google Cloud TTS）
 # ═══════════════════════════════════════════
-
 def generate_voice(narration: str, output: str = "voice.mp3") -> str:
-    print("🎙️  生成語音（Google Cloud TTS）...")
+    print("🎙️ 生成語音（Google Cloud TTS）...")
     url = f"https://texttospeech.googleapis.com/v1/text:synthesize?key={GOOGLE_TTS_KEY}"
     payload = {
         "input": {"text": narration},
@@ -366,22 +319,18 @@ def generate_voice(narration: str, output: str = "voice.mp3") -> str:
     print(f"  ✅ 語音：{output} ({Path(output).stat().st_size // 1024} KB)")
     return output
 
-
 # ═══════════════════════════════════════════
 # 影片渲染（16:9 教學圖卡）
 # ═══════════════════════════════════════════
-
 def render_video(audio_path: str, steps: list, screenshots: dict,
                  title: str, output: str = "video_final.mp4") -> str:
     print("🎬 渲染影片（16:9）...")
     from video_renderer import render_tutorial_video
     return render_tutorial_video(audio_path, steps, screenshots, title, output)
 
-
 # ═══════════════════════════════════════════
 # YouTube 上傳
 # ═══════════════════════════════════════════
-
 def upload_youtube(video_path: str, title: str, description: str, tags: list) -> str:
     print("📤 上傳 YouTube...")
     from googleapiclient.discovery import build
@@ -392,7 +341,6 @@ def upload_youtube(video_path: str, title: str, description: str, tags: list) ->
     if Path("token.pickle").exists():
         with open("token.pickle", "rb") as f:
             creds = pickle.load(f)
-
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -405,15 +353,13 @@ def upload_youtube(video_path: str, title: str, description: str, tags: list) ->
                     "tags": tags, "categoryId": "28"},
         "status": {"privacyStatus": "public"},
     }
-    media   = MediaFileUpload(video_path, chunksize=-1, resumable=True)
+    media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
     request = youtube.videos().insert(part=",".join(body.keys()), body=body, media_body=media)
-
     response = None
     while response is None:
         status, response = request.next_chunk()
         if status:
             print(f"  上傳進度：{int(status.progress()*100)}%")
-
     url = f"https://youtu.be/{response['id']}"
     print(f"  ✅ 上傳完成：{url}")
     if "GITHUB_OUTPUT" in os.environ:
@@ -421,20 +367,20 @@ def upload_youtube(video_path: str, title: str, description: str, tags: list) ->
             f.write(f"youtube_url={url}\nvideo_title={title}\n")
     return url
 
-
 # ═══════════════════════════════════════════
 # 主流程
 # ═══════════════════════════════════════════
-
 def main():
     print(f"\n🚀 Vivi AI研習社 每日影片自動生產流程啟動")
-    print(f"   {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} 台北時間\n")
+    print(f"   {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} 台北時間")
+    print(f"   模式：{'🔍 PREVIEW（只生成，不上傳）' if EXECUTION_MODE == 'PREVIEW' else '🚀 FULL（生成 + 上傳 YouTube）'}\n")
 
     manual_topic = os.getenv("MANUAL_TOPIC", "").strip()
 
+    # ── 共同流程（PREVIEW & FULL 都執行）──
     benchmark = research_benchmark_accounts()
     topics    = analyze_viral_topics(manual_topic)
-    best      = topics[0] if topics else {
+    best = topics[0] if topics else {
         "title":"3步驟用Claude整理會議記錄","keyword":"Claude 教學","score":9,"tool":"Claude"}
 
     print(f"\n  ⭐ 最高分選題（{best.get('score',0)}分）：{best['title']}")
@@ -448,23 +394,36 @@ def main():
         write_to_notion(videos, benchmark, best["title"])
 
     narration, title, description, tags, steps = generate_script(best)
-
     screenshots = capture_screenshots(steps)
 
-    date_str = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-    with open(f"video_meta_{date_str}.json", "w", encoding="utf-8") as f:
+    # 儲存 meta（PREVIEW 存為固定檔名，FULL 存帶時間戳）
+    date_str  = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+    meta_path = "video_meta.json" if EXECUTION_MODE == "PREVIEW" else f"video_meta_{date_str}.json"
+    with open(meta_path, "w", encoding="utf-8") as f:
         json.dump({"title":title,"description":description,"tags":tags,
-                   "steps":steps,"topic":best,"reference_videos":videos}, f,
-                  ensure_ascii=False, indent=2)
-    print(f"  📄 Meta 儲存：video_meta_{date_str}.json")
+                   "steps":steps,"topic":best,"reference_videos":videos,
+                   "mode": EXECUTION_MODE, "generated_at": date_str},
+                  f, ensure_ascii=False, indent=2)
+    print(f"  📄 Meta 儲存：{meta_path}")
 
     audio_path = generate_voice(narration)
     video_path = render_video(audio_path, steps, screenshots, title)
-    youtube_url = upload_youtube(video_path, title, description, tags)
 
-    print(f"\n🎉 完成！影片已上架：{youtube_url}")
-    return youtube_url
-
+    # ── 關鍵分岔點 ────────────────────────────────────
+    if EXECUTION_MODE == "FULL":
+        # FULL 模式：上傳 YouTube
+        youtube_url = upload_youtube(video_path, title, description, tags)
+        print(f"\n🎉 FULL 完成！影片已上架：{youtube_url}")
+        return youtube_url
+    else:
+        # PREVIEW 模式：複製影片為固定檔名供 Artifact 下載，不上傳
+        preview_path = "daily_preview_video.mp4"
+        shutil.copy(video_path, preview_path)
+        print(f"\n✅ PREVIEW 完成！")
+        print(f"   📦 影片：{preview_path}（請至 GitHub Actions → Artifacts 下載確認）")
+        print(f"   📋 Meta：{meta_path}")
+        print(f"   📌 確認無誤後，請手動觸發 FULL 模式上傳")
+        return preview_path
 
 if __name__ == "__main__":
     main()
