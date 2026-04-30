@@ -255,7 +255,20 @@ def generate_script(topic: dict) -> tuple:
       "tip": "進階技巧（12字內）"
     }},
     {{"num":2,"heading":"步5字","tool_name":"{tool}","narration_type":"25字","narration_out":"25字","url":"https://...","action_label":"16字","bullets":["8字","8字","8字"],"example_prompt":"Prompt","example_output":["行1","行2","行3","行4","行5","行6"],"tip":"12字"}},
-    {{"num":3,"heading":"步5字","tool_name":"{tool}","narration_type":"25字","narration_out":"25字","url":"https://...","action_label":"16字","bullets":["8字","8字","8字"],"example_prompt":"Prompt","example_output":["行1","行2","行3","行4","行5","行6"],"tip":"12字"}}
+    {{
+      "num": 3,
+      "heading": "步5字",
+      "tool_name": "{tool}",
+      "is_slide_step": true,
+      "narration_type": "25字，說明輸入什麼大綱或主題讓AI生成簡報",
+      "narration_out": "25字，描述簡報已生成、有哪些張投影片、可直接使用",
+      "url": "https://gamma.app",
+      "action_label": "輸入主題 → AI生成 → 下載",
+      "bullets": ["輸入主題大綱（8字）","AI 生成投影片（8字）","直接下載使用（8字）"],
+      "example_prompt": "Step3 的 Prompt：請生成一份簡報，主題為「XXX」，對象為「職場上班族」，共5張，風格專業簡潔，每張含標題和3個重點",
+      "example_output": ["【AI 生成大綱】","第1張：主題說明","第2張：現況分析","第3張：解決方案","第4張：執行步驟","第5張：結論與行動"],
+      "tip": "加「對象+張數」讓簡報更精準"
+    }}
   ]
 }}
 """
