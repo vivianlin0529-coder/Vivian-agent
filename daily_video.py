@@ -101,12 +101,13 @@ def research_benchmark_accounts() -> dict:
 # ═══════════════════════════════════════════
 # 任務二：爆款選題分析
 # ═══════════════════════════════════════════
-def analyze_viral_topics(manual_topic: str = "") -> list:
+def analyze_viral_topics(manual_topic: str = "", manual_tool: str = "") -> list:
     print("\n💡 任務二：爆款選題分析...")
     if manual_topic:
+        tool = manual_tool or "Claude"
         return [{"title": manual_topic, "score": 10, "keyword": manual_topic,
                  "appeal": "用戶指定", "algorithm": "手動選題", "reason": "手動指定",
-                 "tool": "Claude"}]
+                 "tool": tool}]
     prompt = """
 針對台灣非技術背景上班族，為「Vivi AI研習社」提供 5 個爆款短影片選題。
 每個選題必須：
@@ -297,64 +298,8 @@ def generate_script(topic: dict) -> tuple:
         print(f"    Step {s2.get('num')}: {s2.get('heading')} | prompt={len(s2.get('example_prompt',''))}字")
     # 回傳完整旁白（供 TTS 備用）+ steps + narrations dict
     full = "\n".join(narrations.values())
-    # ── 實際執行每個步驟的 Prompt，取得真實 AI 輸出 ──
-    print("\n🤖 執行各步驟 Prompt，取得真實 AI 輸出...")
-    for step in steps:
-        ep = step.get("example_prompt", "")
-        tool = step.get("tool_name", "Claude")
-        if ep and not step.get("is_slide_step"):
-            print(f"  Step {step['num']} [{tool}] 執行中...")
-            real_out = _get_real_ai_output(ep, tool)
-            if real_out:
-                step["example_output"] = real_out  # 覆蓋假輸出
-
     return full, title, desc, tags, steps, narrations
 
-
-
-def _get_real_ai_output(prompt: str, tool_name: str) -> list[str]:
-    """
-    實際呼叫 Gemini 執行使用者的 Prompt，回傳真實 AI 輸出（分行列表）。
-    渲染時這些文字會串流出現在 Claude/ChatGPT UI 裡。
-    """
-    system = f"""你是 {tool_name} AI 助手，正在協助台灣職場上班族。
-請直接回覆使用者的請求，不要解釋自己是誰。
-格式要求：
-- 使用繁體中文
-- 用條列、標題等清楚格式
-- 禁止出現任何真實人名（用「主管」「客戶」「同事」代替）
-- 回覆要具體、有實際內容（含數字、日期、格式等）
-- 長度：150-250字"""
-    
-    full_prompt = f"{system}\n\n使用者輸入：\n{prompt}"
-    
-    try:
-        config = genai_types.GenerateContentConfig(
-            response_mime_type="text/plain"
-        )
-        msg = gemini.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=full_prompt,
-            config=config
-        )
-        raw = msg.text.strip()
-        # 分行，每行不超過 38 字
-        result = []
-        for line in raw.split("\n"):
-            line = line.strip()
-            if not line:
-                continue
-            if len(line) <= 38:
-                result.append(line)
-            else:
-                # 自動斷行
-                import textwrap
-                result.extend(textwrap.wrap(line, width=36))
-        print(f"    ✅ 真實 AI 輸出：{len(result)} 行")
-        return result[:12]  # 最多12行（畫面限制）
-    except Exception as e:
-        print(f"    ⚠️ 真實輸出取得失敗：{e}")
-        return []
 
 def capture_screenshots(steps: list) -> dict:
     """已停用：改用動態範例渲染"""
@@ -449,10 +394,11 @@ def main():
     print(f"   模式：{'🔍 PREVIEW（只生成，不上傳）' if EXECUTION_MODE == 'PREVIEW' else '🚀 FULL（生成 + 上傳 YouTube）'}\n")
 
     manual_topic = os.getenv("MANUAL_TOPIC", "").strip()
+    manual_tool  = os.getenv("MANUAL_TOOL",  "").strip()
 
     # ── 共同流程（PREVIEW & FULL 都執行）──
     benchmark = research_benchmark_accounts()
-    topics    = analyze_viral_topics(manual_topic)
+    topics    = analyze_viral_topics(manual_topic, manual_tool)
     best = topics[0] if topics else {
         "title":"3步驟用Claude整理會議記錄","keyword":"Claude 教學","score":9,"tool":"Claude"}
 
