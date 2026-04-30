@@ -241,6 +241,7 @@ JSON 格式：
       "narration": "這個步驟的旁白（30-40字）",
       "url": "實際要開啟的網址（必填，如 https://claude.ai）",
       "action_label": "操作說明（顯示在畫面上，如：點「New Chat」→ 貼上文字）"
+      "bullets": ["關鍵動作1（6字內）", "關鍵動作2（6字內）", "預期結果（6字內）"]
     }},
     {{"num": 2, "heading": "步驟標題", "narration": "旁白", "url": "https://...", "action_label": "操作說明"}},
     {{"num": 3, "heading": "步驟標題", "narration": "旁白", "url": "https://...", "action_label": "操作說明"}}
@@ -407,9 +408,9 @@ def capture_screenshots(steps: list) -> dict:
                     break
 
             # ✅ 截圖失敗時生成說明卡
+            # 截圖失敗：讓 video_renderer._placeholder 生成仿真 UI
             if not success:
-                if _make_fallback_screenshot(step, path):
-                    screenshots[num] = path
+                print(f"    ℹ️ Step {num} 交由 video_renderer 生成仿真 UI")
 
         browser.close()
     return screenshots
