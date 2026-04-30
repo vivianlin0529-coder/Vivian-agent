@@ -107,6 +107,76 @@ def _photo_with_overlay(img: Image.Image, tw: int, th: int,
 # ══════════════════════════════════════════════════════
 # 簡報預覽圖（Gamma 風格，Step 3 專用）
 # ══════════════════════════════════════════════════════
+def _render_claude_ui(tw, th, prompt, output_lines, stream_ratio=1.0, thinking_dots=-1):
+    """真實 claude.ai 風格對話 UI"""
+    img  = Image.new("RGB", (tw, th), (255,255,255))
+    draw = ImageDraw.Draw(img)
+    SIDE_W = 196
+    # 左側欄
+    draw.rectangle([(0,0),(SIDE_W,th)], fill=(30,27,23))
+    draw.text((14,14), "\u2736", font=_f(28,True), fill=(255,200,100))
+    draw.text((44,18), "Claude", font=_f(22,True), fill=(230,220,200))
+    draw.rounded_rectangle([(10,56),(SIDE_W-10,86)], radius=8,
+                            fill=(50,44,36), outline=(80,70,55), width=1)
+    draw.text((18,64), "\u270f  New chat", font=_f(17), fill=(200,185,160))
+    draw.text((14,106), "Today", font=_f(13), fill=(110,100,80))
+    for i, h in enumerate(["Meeting notes", "Email draft", "Report summary"]):
+        draw.text((14, 124+i*28), h, font=_f(14), fill=(148,136,115))
+    # 主區
+    CX = SIDE_W
+    draw.rectangle([(CX,0),(tw,48)], fill=(252,251,249))
+    draw.rectangle([(CX,47),(tw,48)], fill=(218,212,200))
+    draw.text((CX+18,14), "claude-sonnet-4-5  \u25be", font=_f(17), fill=(100,88,68))
+    draw.rectangle([(CX,48),(tw,th)], fill=(252,251,249))
+    # 使用者訊息氣泡
+    msg_lines = []
+    for seg in (prompt or "").replace("\u25ae","").split("\n"):
+        msg_lines += (textwrap.wrap(seg, width=30) or [""])
+    msg_lines = [l for l in msg_lines if l][:5]
+    MSG_H = len(msg_lines)*27+18; MSG_W = min(tw-CX-70, 480)
+    MSG_X = tw - MSG_W - 20; MSG_Y = 60
+    draw.rounded_rectangle([(MSG_X,MSG_Y),(tw-20,MSG_Y+MSG_H)],
+                            radius=12, fill=(232,226,214))
+    my = MSG_Y+9
+    for line in msg_lines:
+        draw.text((MSG_X+12,my), line, font=_f(19), fill=(48,36,20)); my+=27
+    # Claude 回覆
+    RY = MSG_Y + MSG_H + 24
+    draw.ellipse([(CX+18,RY),(CX+40,RY+22)], fill=(195,135,55))
+    draw.text((CX+25,RY+2), "\u2736", font=_f(14,True), fill="white")
+    draw.text((CX+48,RY+4), "Claude", font=_f(16,True), fill=(75,60,38))
+    TY = RY+30; MAX_Y = th-72
+    if thinking_dots >= 0:
+        dc = "\u25cf"*thinking_dots+"\u25cb"*(3-thinking_dots)
+        draw.text((CX+22,TY), "  "+dc, font=_f(26), fill=(155,135,95))
+    else:
+        total = sum(len(l) for l in output_lines)
+        shown_ch = int(total*stream_ratio); remain = shown_ch
+        sl = []
+        for line in output_lines:
+            if remain<=0: break
+            sl.append(line[:remain]); remain -= len(line)
+        ry2 = TY
+        for line in sl:
+            if ry2+27>MAX_Y: break
+            is_h = line.startswith(("\u3010","\u2022","\u2192","\u2705","\ud83d","\u7b2c","*"))
+            draw.text((CX+22,ry2), line[:40], font=_f(19,is_h),
+                      fill=(45,30,10) if is_h else (65,50,30))
+            ry2+=27
+        if stream_ratio<1.0 and sl:
+            cx3=CX+22+draw.textlength(sl[-1][:40],font=_f(19))
+            if ry2-27+2<MAX_Y:
+                draw.rectangle([(cx3+2,ry2-25),(cx3+9,ry2-4)], fill=(155,80,35))
+    # 底部輸入
+    IY = th-64
+    draw.rounded_rectangle([(CX+14,IY),(tw-14,th-10)], radius=10,
+                            fill="white", outline=(205,195,178), width=1)
+    draw.text((CX+28,IY+14), "Message Claude\u2026", font=_f(18), fill=(175,158,132))
+    draw.rounded_rectangle([(tw-52,IY+7),(tw-20,th-18)], radius=7, fill=(30,27,23))
+    draw.text((tw-42,IY+13), "\u2191", font=_f(20,True), fill="white")
+    return img
+
+
 def _render_slide_preview(outline_items: list[str], title: str,
                            tw: int, th: int) -> Image.Image:
     """渲染一張 Gamma 風格的簡報預覽，看起來像真的投影片"""
@@ -325,8 +395,19 @@ def _step_clip(step, title, total, type_audio, out_audio):
         img2 = Image.fromarray(arr.copy())
         d2   = ImageDraw.Draw(img2)
         rx   = RX
-
-        # Chat 背景
+        use_claude_ui = any(k in tool.lower() for k in ["claude","anthropic"])
+        if use_claude_ui and not show_slide:
+            clean_sp = sp.replace("\u25ae","")
+            out_list = [l for l in so.split("\n") if l] if so else []
+            all_chars = sum(len(l) for l in out_list)
+            all_total = sum(len(l) for l in out_text.split("\n") if l)
+            ratio = min(1.0, all_chars/max(all_total,1)) if so else 0.0
+            cl_img = _render_claude_ui(RW, AH, clean_sp, out_list, ratio, dots)
+            img2.paste(cl_img, (rx, AY))
+            d2 = ImageDraw.Draw(img2)
+            d2.rectangle([(rx-2,AY-2),(W-10,AB+2)], outline=C["sep"], width=3)
+            return np.array(img2)
+        # Chat 背景（非 Claude 工具）
         d2.rectangle([(rx,AY),(W-12,AB)], fill=C["cbg"])
         # Tool bar
         d2.rectangle([(rx,AY),(W-12,AY+BAR)], fill=C["tbar"])
