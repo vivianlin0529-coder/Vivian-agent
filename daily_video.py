@@ -15,8 +15,8 @@ from google.genai import types as genai_types
 # ── 環境變數 ──────────────────────────────
 
 GEMINI_KEY       = os.getenv("GEMINI_API_KEY", "")
-ELEVENLABS_KEY   = os.getenv("ELEVENLABS_API_KEY", "")
-ELEVENLABS_VOICE = os.getenv("ELEVENLABS_VOICE_ID", "")   # 格式如 21m00Tcm4TlvDq8ikWAM
+GOOGLE_TTS_KEY   = os.getenv("YOUTUBE_API_KEY", "")        # 共用同一組 Google API Key
+GOOGLE_TTS_VOICE = os.getenv("GOOGLE_TTS_VOICE", "cmn-TW-Wavenet-A")   # 預設女聲
 YOUTUBE_API_KEY  = os.getenv("YOUTUBE_API_KEY", "")
 NOTION_TOKEN     = os.getenv("NOTION_TOKEN", "")
 NOTION_VIDEO_DB  = os.getenv("NOTION_VIDEO_DB", "")
@@ -33,9 +33,8 @@ def _require(name: str, value: str):
     if not value:
         raise EnvironmentError(f"❌ 缺少環境變數：{name}")
 
-_require("GEMINI_API_KEY",    GEMINI_KEY)
-_require("ELEVENLABS_API_KEY", ELEVENLABS_KEY)
-_require("ELEVENLABS_VOICE_ID", ELEVENLABS_VOICE)
+_require("GEMINI_API_KEY",  GEMINI_KEY)
+_require("YOUTUBE_API_KEY", GOOGLE_TTS_KEY)
 
 # ── Gemini 初始化 ─────────────────────────
 
@@ -375,20 +374,29 @@ def generate_script(topic: dict) -> tuple[str, str, str, list]:
 # ═══════════════════════════════════════════
 
 def generate_voice(script: str, output: str = "voice.mp3") -> str:
-    print("🎙️  生成語音（ElevenLabs）...")
-    if not ELEVENLABS_VOICE:
-        raise EnvironmentError("ELEVENLABS_VOICE_ID 未設定")
+    """使用 Google Cloud Text-to-Speech 生成語音（每月 100 萬字元免費）。"""
+    print("🎙️  生成語音（Google Cloud TTS）...")
+    import base64 as _b64
 
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE}"
-    headers = {"xi-api-key": ELEVENLABS_KEY, "Content-Type": "application/json"}
+    url = f"https://texttospeech.googleapis.com/v1/text:synthesize?key={GOOGLE_TTS_KEY}"
+    headers = {"Content-Type": "application/json"}
     payload = {
-        "text": script,
-        "model_id": "eleven_multilingual_v2",
-        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+        "input": {"text": script},
+        "voice": {
+            "languageCode": "cmn-TW",
+            "name": GOOGLE_TTS_VOICE,       # 預設 cmn-TW-Wavenet-A（女聲）
+            "ssmlGender": "FEMALE",
+        },
+        "audioConfig": {
+            "audioEncoding": "MP3",
+            "speakingRate": 1.05,           # 略快，適合短影片節奏
+            "pitch": 1.0,
+        },
     }
-    resp = _safe_post(url, headers=headers, json_body=payload, timeout=120)
+    resp = _safe_post(url, headers=headers, json_body=payload, timeout=60)
+    audio_bytes = _b64.b64decode(resp.json()["audioContent"])
     with open(output, "wb") as f:
-        f.write(resp.content)
+        f.write(audio_bytes)
     print(f"  ✅ 語音儲存：{output} ({Path(output).stat().st_size // 1024} KB)")
     return output
 
