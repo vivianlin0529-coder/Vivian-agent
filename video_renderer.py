@@ -103,26 +103,68 @@ def _load_screenshot(path: str | None, target_w: int, target_h: int) -> Image.Im
         return None
 
 
-def _placeholder(target_w: int, target_h: int, text: str = "") -> Image.Image:
-    """截圖不存在時的佔位圖。"""
-    img  = Image.new("RGB", (target_w, target_h), (220, 215, 205))
+def _placeholder(target_w: int, target_h: int, text: str = "",
+                 url: str = "", action_label: str = "") -> Image.Image:
+    """仿真瀏覽器 UI — 當真實截圖被防火牆擋時顯示"""
+    img  = Image.new("RGB", (target_w, target_h), "#F5F3EF")
     draw = ImageDraw.Draw(img)
-    f    = _font(36)
-    # 格線裝飾
-    for y in range(0, target_h, 60):
-        draw.line([(0, y), (target_w, y)], fill=(200, 195, 185), width=1)
-    for x in range(0, target_w, 60):
-        draw.line([(x, 0), (x, target_h)], fill=(200, 195, 185), width=1)
-    # 中央文字
-    lines = textwrap.wrap(text or "截圖載入中", width=18)
-    total = len(lines) * 50
-    y = (target_h - total) // 2
-    for line in lines:
-        lw = draw.textlength(line, font=f)
-        draw.text(((target_w - lw) // 2, y), line, font=f, fill=(140, 130, 115))
-        y += 50
+    f_sm  = _font(20)
+    f_md  = _font(26)
+    f_lg  = _font_bold(32)
+    f_url = _font(22)
+    # ── 瀏覽器 chrome ──
+    draw.rectangle([0, 0, target_w, target_h], fill="#ECEAE5")
+    draw.rectangle([0, 0, target_w, 48], fill="#D0CCC6")
+    for cx, col in [(16,"#FF5F57"),(36,"#FEBC2E"),(56,"#28C840")]:
+        draw.ellipse([cx-7,17,cx+7,31], fill=col)
+    bar_url = url or "claude.ai"
+    draw.rectangle([80, 10, target_w-16, 38], fill="white", outline="#BBBBBB", width=1)
+    draw.text((94, 16), bar_url[:60], font=f_url, fill="#555555")
+    # ── 主內容 ──
+    draw.rectangle([0, 48, target_w, target_h], fill="white")
+    if "claude" in (url or "").lower():
+        draw.rectangle([0, 48, 200, target_h], fill="#F7F4EF")
+        draw.text((14, 64),  "✦ Claude", font=_font_bold(26), fill="#8B5E3C")
+        draw.text((14, 102), "+ 新對話",  font=f_sm, fill="#7A6A58")
+        draw.rectangle([4, 130, 196, 168], fill="#EDE9E3")
+        draw.text((14, 138), "今天的對話", font=f_sm, fill="#5C4A32")
+        draw.rectangle([210, 48, target_w, target_h], fill="white")
+        draw.rectangle([220, 70, target_w-16, 200],
+                       fill="#F7F4EF", outline="#E8E2DA", width=1)
+        draw.text((236, 84),  "✦ Claude", font=_font_bold(22), fill="#8B5E3C")
+        draw.text((236, 114), "以下是整理後的會議重點：",  font=f_md, fill="#3D3D3D")
+        draw.text((236, 148), "• 決議事項  • 待辦清單  • 負責人", font=f_sm, fill="#7A6A58")
+        draw.rectangle([210, target_h-72, target_w-16, target_h-12],
+                       fill="#F7F4EF", outline="#D4B896", width=2)
+        draw.text((226, target_h-54), "貼上你的會議記錄文字…", font=f_md, fill="#BBBBBB")
+        draw.ellipse([target_w-54, target_h-64, target_w-18, target_h-20], fill="#8B5E3C")
+        draw.text((target_w-46, target_h-54), "↑", font=_font_bold(26), fill="white")
+    elif "gamma" in (url or "").lower():
+        draw.rectangle([0, 48, target_w, 96], fill="#6C47FF")
+        draw.text((20, 60), "⚡ Gamma — AI 簡報", font=_font_bold(28), fill="white")
+        w3 = (target_w - 60) // 3
+        for i,(t,c) in enumerate([("封面","#EEF2FF"),("說明","#F0FDF4"),("結論","#FFF7ED")]):
+            x0 = 20 + i*(w3+10)
+            draw.rectangle([x0, 110, x0+w3, 340], fill=c, outline="#CCCCCC", width=1)
+            draw.text((x0+16, 130), t, font=f_lg, fill="#333333")
+    elif "notion" in (url or "").lower():
+        draw.text((24, 68), "Notion", font=_font_bold(30), fill="#191919")
+        draw.rectangle([20, 110, target_w-20, 150], fill="#F1F1EF", outline="#E3E2E0", width=1)
+        draw.text((36, 120), "搜尋或輸入指令…", font=f_md, fill="#AAAAAA")
+    else:
+        host = (url or "").split("//")[-1].split("/")[0] or "網站"
+        draw.text((24, 64), host, font=f_lg, fill="#333333")
+        draw.rectangle([20, 100, target_w-20, 340], fill="#FAFAFA", outline="#E5E5E5", width=1)
+        wlines = textwrap.wrap(action_label or text or "操作說明", width=28)
+        ty = 120
+        for wl in wlines[:6]:
+            draw.text((36, ty), wl, font=f_md, fill="#444444")
+            ty += 40
+    # ── 底部提示 ──
+    draw.rectangle([0, target_h-40, target_w, target_h], fill="#8B5E3C")
+    hint = textwrap.shorten(action_label or text, width=50, placeholder="…")
+    draw.text((12, target_h-30), f"▶  {hint}", font=f_sm, fill="#FFE4C4")
     return img
-
 
 # ── 通用畫面元素 ──────────────────────────────────────────────────────────
 
@@ -224,17 +266,24 @@ def _make_step_card(step: dict, screenshot_img: Image.Image | None,
     # 橫線
     draw.rectangle([(40, TOP_BAR + 230), (LEFT_W - 20, TOP_BAR + 234)], fill=DIVIDER_COL)
 
-    # ── 旁白文字（自動換行）──
-    fb = _font(40)
-    wrapped = textwrap.fill(narr, width=18)
-    lines   = wrapped.split("\n")
-    y = TOP_BAR + 260
-    for line in lines[:8]:
+    # ── 旁白文字（自動換行，限制在左欄內不切字）──
+    fb     = _font(36)
+    max_px = LEFT_W - 80
+    tmp_d  = ImageDraw.Draw(Image.new("RGB",(1,1)))
+    for cw in range(15, 7, -1):
+        test_lines = textwrap.fill(narr, width=cw).split("\n")
+        if all(tmp_d.textlength(l, font=fb) <= max_px for l in test_lines):
+            break
+    y = TOP_BAR + 265
+    for line in test_lines[:9]:
         draw.text((40, y), line, font=fb, fill=BODY_COL)
-        y += 56
+        y += 50
 
     # ── 右側截圖 ──
-    shot = screenshot_img or _placeholder(RIGHT_W, CONTENT_H, f"Step {num}\n{heading}")
+    shot = screenshot_img or _placeholder(
+        RIGHT_W, CONTENT_H,
+        text=heading, url=step.get("url",""), action_label=action,
+    )
     img.paste(shot, (RIGHT_X, CONTENT_TOP))
 
     # 截圖外框
