@@ -40,6 +40,7 @@ jobs:
             numpy \
             "moviepy==1.0.3" \
             imageio-ffmpeg \
+            edge-tts \
             google-genai \
             google-api-python-client \
             google-auth-oauthlib \
