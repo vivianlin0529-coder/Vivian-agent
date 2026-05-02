@@ -325,8 +325,8 @@ def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     wd2.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=C["win_g"], width=4)
     win_arr = np.array(wi)
 
-    pc = VideoClip(lambda t: pain_arr, duration=pd)
-    wc = VideoClip(lambda t: win_arr,  duration=wd)
+    pc = VideoClip(lambda t: pain_arr, duration=pd, size=(W,H))
+    wc = VideoClip(lambda t: win_arr,  duration=wd, size=(W,H))
     if Path(pain_audio).exists(): pc = pc.set_audio(AudioFileClip(pain_audio))
     if Path(win_audio).exists():  wc = wc.set_audio(AudioFileClip(win_audio))
     return concatenate_videoclips([pc, wc], method="compose")
@@ -500,8 +500,8 @@ def _step_clip(step, title, total, type_audio, out_audio):
         n = int(op*len(out_text))
         return _R(base_arr, prompt, out_text[:n], -1)
 
-    tc = VideoClip(tf, duration=td)
-    oc = VideoClip(of, duration=od)
+    tc = VideoClip(tf, duration=td, size=(W,H))
+    oc = VideoClip(of, duration=od, size=(W,H))
     if Path(type_audio).exists(): tc = tc.set_audio(AudioFileClip(type_audio))
     if Path(out_audio).exists():  oc = oc.set_audio(AudioFileClip(out_audio))
     return concatenate_videoclips([tc, oc], method="compose")
@@ -522,7 +522,7 @@ def _cta_clip(title, cta_audio):
         d.text(((W-tw)//2, H//2+yo), txt, font=_f(sz,bold),
                fill=C["hd"] if bold else C["bd"])
     arr = np.array(img)
-    clip = VideoClip(lambda t: arr, duration=dur)
+    clip = VideoClip(lambda t: arr, duration=dur, size=(W,H))
     if Path(cta_audio).exists(): clip = clip.set_audio(AudioFileClip(cta_audio))
     return clip
 
