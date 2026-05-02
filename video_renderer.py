@@ -124,26 +124,55 @@ def _audio_dur(path):
 # ══════════════════════════════════════════════════════
 # Unsplash 真實照片下載
 # ══════════════════════════════════════════════════════
-def _fetch_photo(query: str, w: int, h: int, cache_path: str) -> Image.Image | None:
-    """從 Unsplash Source 抓免費高質照片（不需 API key）"""
+
+# ── Pexels 照片庫（直連，無需 API key）────────────────────────────────
+PEXELS_PAIN = [
+    "https://images.pexels.com/photos/3760810/pexels-photo-3760810.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/4101143/pexels-photo-4101143.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=1920",
+]
+PEXELS_WIN = [
+    "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/1181533/pexels-photo-1181533.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=1920",
+]
+
+def _fetch_photo(category: str, w: int, h: int, cache_path: str, seed: int = 0) -> Image.Image | None:
+    """從 Pexels 直連下載真實情境照片（pain=壓力辦公，win=成功協作）"""
+    import urllib3; urllib3.disable_warnings()
+
     if Path(cache_path).exists():
         try:
             img = Image.open(cache_path).convert("RGB")
-            print(f"  📷 使用快取照片：{cache_path}")
-            return img
+            if img.size[0] > 200:
+                print(f"  📷 快取照片：{cache_path}")
+                return img
         except: pass
+
+    urls = PEXELS_PAIN if "pain" in category else PEXELS_WIN
+    url  = urls[seed % len(urls)]
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; Vivi-Agent/1.0)",
+        "Accept": "image/jpeg,image/*",
+    }
     try:
-        # Unsplash Source API（免費）
-        url = f"https://source.unsplash.com/{w}x{h}/?{query}"
-        resp = requests.get(url, timeout=15, allow_redirects=True)
-        if resp.status_code == 200 and len(resp.content) > 10000:
+        resp = requests.get(url, timeout=20, verify=False,
+                            allow_redirects=True, headers=headers)
+        if resp.status_code == 200 and len(resp.content) > 20000:
             img = Image.open(io.BytesIO(resp.content)).convert("RGB")
-            img.save(cache_path)
-            print(f"  📷 下載照片成功：{cache_path} ({len(resp.content)//1024}KB)")
+            img = img.resize((w, h), Image.LANCZOS)
+            img.save(cache_path, quality=90)
+            print(f"  📷 Pexels 照片下載成功：{cache_path} ({len(resp.content)//1024}KB)")
             return img
+        else:
+            print(f"  ⚠️ 照片 HTTP {resp.status_code}")
     except Exception as e:
         print(f"  ⚠️ 照片下載失敗：{e}")
     return None
+
 
 def _photo_with_overlay(img: Image.Image, tw: int, th: int,
                          overlay_col: tuple, alpha: int = 140) -> Image.Image:
@@ -328,12 +357,11 @@ def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     pd = _audio_dur(pain_audio); wd = _audio_dur(win_audio)
 
     # ── 下載封面照片 ──
-    pain_photo = _fetch_photo(
-        "stressed,office,email,computer,busy,work",
-        RW, AH, "cover_pain.jpg")
-    win_photo = _fetch_photo(
-        "success,presentation,team,laptop,smile,office",
-        RW, AH, "cover_win.jpg")
+    # 根據選題 seed 選不同照片（避免每天一樣）
+    import datetime as _dt
+    _seed = _dt.date.today().toordinal()
+    pain_photo = _fetch_photo("pain", RW, AH, "cover_pain.jpg", seed=_seed)
+    win_photo  = _fetch_photo("win",  RW, AH, "cover_win.jpg",  seed=_seed)
 
     # ── Pain 幀 ──
     pi = Image.new("RGB", (W,H), (255,244,242))
