@@ -158,73 +158,95 @@ def _photo_with_overlay(img: Image.Image, tw: int, th: int,
 # 簡報預覽圖（Gamma 風格，Step 3 專用）
 # ══════════════════════════════════════════════════════
 def _render_claude_ui(tw, th, prompt, output_lines, stream_ratio=1.0, thinking_dots=-1):
-    """真實 claude.ai 風格對話 UI"""
+    """真實 claude.ai 風格對話 UI（文字嚴格裁剪在框內）"""
     img  = Image.new("RGB", (tw, th), (255,255,255))
     draw = ImageDraw.Draw(img)
-    SIDE_W = 196
-    # 左側欄
+    SIDE_W   = 180
+    CX       = SIDE_W
+    CHAT_MAX = tw - CX - 20   # 對話區最大寬度（右邊留 20px 邊距）
+
+    # ── 左側欄 ──
     draw.rectangle([(0,0),(SIDE_W,th)], fill=(30,27,23))
-    draw.text((14,14), "\u2736", font=_f(28,True), fill=(255,200,100))
-    draw.text((44,18), "Claude", font=_f(22,True), fill=(230,220,200))
-    draw.rounded_rectangle([(10,56),(SIDE_W-10,86)], radius=8,
+    _safe_text(draw,(12,14),"✶  Claude",_f(22,True),(255,200,100),max_width=SIDE_W-16)
+    draw.rounded_rectangle([(8,54),(SIDE_W-8,80)], radius=7,
                             fill=(50,44,36), outline=(80,70,55), width=1)
-    draw.text((18,64), "\u270f  New chat", font=_f(17), fill=(200,185,160))
-    draw.text((14,106), "Today", font=_f(13), fill=(110,100,80))
-    for i, h in enumerate(["Meeting notes", "Email draft", "Report summary"]):
-        draw.text((14, 124+i*28), h, font=_f(14), fill=(148,136,115))
-    # 主區
-    CX = SIDE_W
-    draw.rectangle([(CX,0),(tw,48)], fill=(252,251,249))
-    draw.rectangle([(CX,47),(tw,48)], fill=(218,212,200))
-    draw.text((CX+18,14), "claude-sonnet-4-5  \u25be", font=_f(17), fill=(100,88,68))
-    draw.rectangle([(CX,48),(tw,th)], fill=(252,251,249))
-    # 使用者訊息氣泡
+    _safe_text(draw,(16,60),"+ New chat",_f(15),(200,185,160),max_width=SIDE_W-20)
+    _safe_text(draw,(12,96),"Today",_f(12),(110,100,80))
+    for i,h in enumerate(["Meeting notes","Email draft","KPI report"]):
+        _safe_text(draw,(12,112+i*26),h,_f(13),(148,136,115),max_width=SIDE_W-16)
+
+    # ── 頂部 bar ──
+    draw.rectangle([(CX,0),(tw,44)], fill=(252,251,249))
+    draw.rectangle([(CX,43),(tw,44)], fill=(218,212,200))
+    _safe_text(draw,(CX+14,12),"claude-sonnet-4-5  ▾",_f(16),(100,88,68),max_width=CHAT_MAX)
+    draw.rectangle([(CX,44),(tw,th)], fill=(252,251,249))
+
+    # ── 使用者訊息氣泡（嚴格限寬） ──
+    BUBBLE_W  = min(CHAT_MAX - 16, 400)
+    BUBBLE_X  = tw - BUBBLE_W - 16
+    MSG_Y     = 56
+    clean_p   = (prompt or "").replace("▮","").strip()
+    avg_cw    = max(1, draw.textlength("測", font=_f(17)))
+    cpl       = max(8, int(BUBBLE_W / avg_cw) - 1)
     msg_lines = []
-    for seg in (prompt or "").replace("\u25ae","").split("\n"):
-        msg_lines += (textwrap.wrap(seg, width=30) or [""])
-    msg_lines = [l for l in msg_lines if l][:5]
-    MSG_H = len(msg_lines)*27+18; MSG_W = min(tw-CX-70, 480)
-    MSG_X = tw - MSG_W - 20; MSG_Y = 60
-    draw.rounded_rectangle([(MSG_X,MSG_Y),(tw-20,MSG_Y+MSG_H)],
-                            radius=12, fill=(232,226,214))
-    my = MSG_Y+9
+    for seg in clean_p.split("\n"):
+        seg = seg.strip()
+        if not seg: continue
+        msg_lines += textwrap.wrap(seg, width=cpl) or [seg[:cpl]]
+    msg_lines = msg_lines[:5]
+    MSG_H = len(msg_lines)*24 + 16
+    draw.rounded_rectangle([(BUBBLE_X, MSG_Y),(tw-14, MSG_Y+MSG_H)],
+                            radius=10, fill=(232,226,214))
+    my = MSG_Y + 8
     for line in msg_lines:
-        draw.text((MSG_X+12,my), line, font=_f(19), fill=(48,36,20)); my+=27
-    # Claude 回覆
-    RY = MSG_Y + MSG_H + 24
-    draw.ellipse([(CX+18,RY),(CX+40,RY+22)], fill=(195,135,55))
-    draw.text((CX+25,RY+2), "\u2736", font=_f(14,True), fill="white")
-    draw.text((CX+48,RY+4), "Claude", font=_f(16,True), fill=(75,60,38))
-    TY = RY+30; MAX_Y = th-72
+        _safe_text(draw,(BUBBLE_X+10,my),line,_f(17),(48,36,20),max_width=BUBBLE_W-18)
+        my += 24
+
+    # ── Claude 回覆 ──
+    RY = MSG_Y + MSG_H + 18
+    draw.ellipse([(CX+12,RY),(CX+30,RY+18)], fill=(195,135,55))
+    draw.text((CX+16,RY+2),"✶",font=_f(12,True),fill="white")
+    draw.text((CX+36,RY+2),"Claude",font=_f(15,True),fill=(75,60,38))
+    TY    = RY + 26
+    INPUT_Y = th - 58
+    MAX_Y   = INPUT_Y - 6
+
+    avg_ow = max(1, draw.textlength("測", font=_f(18)))
+    out_cpl = max(8, int(CHAT_MAX / avg_ow) - 1)
+
     if thinking_dots >= 0:
-        dc = "\u25cf"*thinking_dots+"\u25cb"*(3-thinking_dots)
-        draw.text((CX+22,TY), "  "+dc, font=_f(26), fill=(155,135,95))
+        dc = "●"*thinking_dots + "○"*(3-thinking_dots)
+        draw.text((CX+16,TY),"  "+dc,font=_f(24),fill=(155,135,95))
     else:
-        total = sum(len(l) for l in output_lines)
-        shown_ch = int(total*stream_ratio); remain = shown_ch
+        total    = sum(len(l) for l in output_lines)
+        shown_ch = int(total * stream_ratio)
+        remain   = shown_ch
         sl = []
-        for line in output_lines:
-            if remain<=0: break
-            sl.append(line[:remain]); remain -= len(line)
+        for ln in output_lines:
+            if remain <= 0: break
+            sl.append(ln[:remain]); remain -= len(ln)
         ry2 = TY
-        for line in sl:
-            if ry2+27>MAX_Y: break
-            is_h = line.startswith(("\u3010","\u2022","\u2192","\u2705","\ud83d","\u7b2c","*"))
-            draw.text((CX+22,ry2), line[:40], font=_f(19,is_h),
-                      fill=(45,30,10) if is_h else (65,50,30))
-            ry2+=27
-        if stream_ratio<1.0 and sl:
-            cx3=CX+22+draw.textlength(sl[-1][:40],font=_f(19))
-            if ry2-27+2<MAX_Y:
-                draw.rectangle([(cx3+2,ry2-25),(cx3+9,ry2-4)], fill=(155,80,35))
-    # 底部輸入
-    IY = th-64
-    draw.rounded_rectangle([(CX+14,IY),(tw-14,th-10)], radius=10,
+        done = False
+        for raw in sl:
+            if done: break
+            for wl in (textwrap.wrap(raw, width=out_cpl) or [raw[:out_cpl]]):
+                if ry2 + 24 > MAX_Y: done = True; break
+                is_h = raw.startswith(("【","•","→","✅","第","*","「","『"))
+                col  = (38,22,8) if is_h else (60,45,28)
+                _safe_text(draw,(CX+16,ry2),wl,_f(18,is_h),col,max_width=CHAT_MAX)
+                ry2 += 24
+        if stream_ratio < 1.0 and ry2 - 24 < MAX_Y:
+            draw.rectangle([(CX+16+2, ry2-22),(CX+16+7, ry2-4)], fill=(155,80,35))
+
+    # ── 底部輸入框 ──
+    draw.rounded_rectangle([(CX+10,INPUT_Y),(tw-10,th-10)], radius=9,
                             fill="white", outline=(205,195,178), width=1)
-    draw.text((CX+28,IY+14), "Message Claude\u2026", font=_f(18), fill=(175,158,132))
-    draw.rounded_rectangle([(tw-52,IY+7),(tw-20,th-18)], radius=7, fill=(30,27,23))
-    draw.text((tw-42,IY+13), "\u2191", font=_f(20,True), fill="white")
+    _safe_text(draw,(CX+24,INPUT_Y+12),"Message Claude…",
+               _f(17),(175,158,132),max_width=CHAT_MAX-50)
+    draw.rounded_rectangle([(tw-46,INPUT_Y+5),(tw-14,th-14)], radius=7, fill=(30,27,23))
+    draw.text((tw-36,INPUT_Y+10),"↑",font=_f(19,True),fill="white")
     return img
+
 
 
 def _render_slide_preview(outline_items: list[str], title: str,
