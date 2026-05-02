@@ -2,11 +2,23 @@ name: Vivi AI研習社 每日影片自動生產
 
 on:
   schedule:
-    - cron: "0 1 * * *"   # 台北時間 09:00
+    - cron: "30 0 * * *"   # 台北時間 08:30
   workflow_dispatch:
     inputs:
+      mode:
+        description: "執行模式"
+        required: true
+        default: "PREVIEW"
+        type: choice
+        options:
+          - PREVIEW
+          - FULL
       manual_topic:
         description: "手動指定選題（留空則自動）"
+        required: false
+        default: ""
+      manual_tool:
+        description: "手動指定工具（Claude / ChatGPT / Gamma 等）"
         required: false
         default: ""
 
@@ -22,35 +34,48 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: pip
+          python-version: "3.10"
 
       - name: Install system fonts & ffmpeg
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y fonts-noto-cjk ffmpeg
+          sudo apt-get install -y fonts-noto-cjk ffmpeg libsm6 libxext6
 
       - name: Install Python dependencies
-        run: pip install -r requirements.txt
-
-      - name: Install Playwright browsers
-        run: playwright install chromium --with-deps
+        run: |
+          pip install --upgrade pip
+          pip install --no-cache-dir \
+            "moviepy==1.0.3" \
+            imageio-ffmpeg \
+            edge-tts \
+            google-genai \
+            requests \
+            Pillow \
+            numpy \
+            google-auth \
+            google-auth-oauthlib \
+            google-api-python-client \
+            playwright \
+            PyNaCl
+          playwright install chromium
 
       - name: Restore YouTube token
         if: env.YOUTUBE_TOKEN_B64 != ''
-        run: echo "${{ secrets.YOUTUBE_TOKEN_B64 }}" | base64 -d > token.pickle
+        run: echo "$YOUTUBE_TOKEN_B64" | base64 -d > token.pickle
         env:
           YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
 
       - name: Run daily video pipeline
         id: pipeline
         env:
-          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
-          YOUTUBE_API_KEY:     ${{ secrets.YOUTUBE_API_KEY }}
-          YOUTUBE_TOKEN_B64:   ${{ secrets.YOUTUBE_TOKEN_B64 }}
-          NOTION_TOKEN:        ${{ secrets.NOTION_TOKEN }}
-          NOTION_VIDEO_DB:     ${{ secrets.NOTION_VIDEO_DB }}
-          MANUAL_TOPIC:        ${{ github.event.inputs.manual_topic }}
+          GEMINI_API_KEY:    ${{ secrets.GEMINI_API_KEY }}
+          YOUTUBE_API_KEY:   ${{ secrets.YOUTUBE_API_KEY }}
+          YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
+          NOTION_TOKEN:      ${{ secrets.NOTION_TOKEN }}
+          NOTION_VIDEO_DB:   ${{ secrets.NOTION_VIDEO_DB }}
+          EXECUTION_MODE:    ${{ github.event.inputs.mode || 'PREVIEW' }}
+          MANUAL_TOPIC:      ${{ github.event.inputs.manual_topic || '' }}
+          MANUAL_TOOL:       ${{ github.event.inputs.manual_tool || '' }}
         run: python daily_video.py
 
       - name: Upload artifacts
@@ -58,13 +83,5 @@ jobs:
         if: always()
         with:
           name: vivi-video-${{ github.run_number }}
-          path: |
-            video_final.mp4
-            voice.mp3
-            video_meta_*.json
-            screenshot_step*.png
-          retention-days: 7
-
-      - name: Print result
-        if: steps.pipeline.outputs.youtube_url != ''
-        run: echo "✅ 上架：${{ steps.pipeline.outputs.youtube_url }}"
+          path: daily_preview_video.mp4
+          retention-days: 1
