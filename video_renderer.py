@@ -51,6 +51,49 @@ def _f(sz, bold=False):
         if k not in _FC: _FC[k] = ImageFont.load_default()
     return _FC[k]
 
+
+def _safe_text(draw, xy, text, font, fill, max_width=None):
+    """繪製文字，自動截斷確保不超出 max_width"""
+    if not text:
+        return
+    if max_width is None:
+        draw.text(xy, text, font=font, fill=fill)
+        return
+    # 逐字截斷直到寬度 ≤ max_width
+    while len(text) > 0:
+        w = draw.textlength(text, font=font)
+        if w <= max_width:
+            break
+        text = text[:-1]
+    if text:
+        draw.text(xy, text, font=font, fill=fill)
+
+def _safe_wrap(draw, x, y, text, font, fill, max_width, line_height, max_lines=99):
+    """自動換行繪製，確保每行不超出 max_width"""
+    import textwrap as _tw
+    if not text:
+        return y
+    # 先算出合適的 char width（粗估）
+    avg_char_w = draw.textlength("測", font=font)
+    chars_per_line = max(1, int(max_width / avg_char_w))
+    lines = []
+    for seg in text.split("\n"):
+        wrapped = _tw.wrap(seg, width=chars_per_line) if seg else [""]
+        lines.extend(wrapped)
+    drawn = 0
+    for line in lines:
+        if drawn >= max_lines:
+            break
+        # 再次確保單行不超出
+        while line and draw.textlength(line, font=font) > max_width:
+            line = line[:-1]
+        if line:
+            draw.text((x, y), line, font=font, fill=fill)
+            y += line_height
+            drawn += 1
+    return y
+
+
 def _top(draw, title=""):
     draw.rectangle([(0,0),(W,TOP_H)], fill=C["brand_bg"])
     draw.text((30,(TOP_H-30)//2), BRAND, font=_f(30,True), fill=C["gold"])
@@ -61,8 +104,12 @@ def _top(draw, title=""):
 def _bot(draw, hint="", num=0, total=0):
     draw.rectangle([(0,H-BOT_H),(W,H)], fill=C["bot_bg"])
     if hint:
-        hw = draw.textlength(hint[:72], font=_f(23))
-        draw.text(((W-hw)//2, H-BOT_H+(BOT_H-23)//2), hint[:72], font=_f(23), fill=C["bot_fg"])
+        # 自動縮短至單行不超出畫面
+        h_text = hint
+        while h_text and draw.textlength(h_text, font=_f(23)) > W - 80:
+            h_text = h_text[:-1]
+        hw = draw.textlength(h_text, font=_f(23))
+        draw.text(((W-hw)//2, H-BOT_H+(BOT_H-23)//2), h_text, font=_f(23), fill=C["bot_fg"])
     if total:
         r, g = 6, 16; sx = W-(total*(r*2+g))-22; sy = H-12
         for i in range(1, total+1):
@@ -280,7 +327,7 @@ def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     pd2.rectangle([(36, AY+76),(LW-18, AY+80)], fill=C["pain_r"])
     y = AY + 96
     for pt in pain_pts[:4]:
-        pd2.text((36,y), f"✕  {pt[:24]}", font=_f(32), fill=C["pain_txt"])
+        _safe_text(pd2, (36,y), f"✕  {pt}", font=_f(32), fill=C["pain_txt"], max_width=LW-50)
         y += 56
 
     # 右側：真實照片
@@ -309,7 +356,7 @@ def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     wd2.rectangle([(36, AY+76),(LW-18, AY+80)], fill=C["win_g"])
     y = AY + 96
     for wt in win_pts[:4]:
-        wd2.text((36,y), f"✅  {wt[:24]}", font=_f(32), fill=C["win_txt"])
+        _safe_text(wd2, (36,y), f"✅  {wt}", font=_f(32), fill=C["win_txt"], max_width=LW-50)
         y += 56
 
     # 右側：成果照片
@@ -363,17 +410,17 @@ def _step_clip(step, title, total, type_audio, out_audio):
     bd.text((cx-nw//2, cy-24), str(num), font=_f(40,True), fill=(255,255,255))
     fh = _f(50,True); hw = bd.textlength(head, font=fh)
     fh = _f(40,True) if hw > LW-36 else fh
-    bd.text((30, AY+112), head, font=fh, fill=C["hd"])
+    _safe_text(bd, (30, AY+112), head, font=fh, fill=C["hd"], max_width=LW-36)
     bd.rectangle([(30, AY+184),(LW-8, AY+188)], fill=C["sep"])
     y = AY + 204
     for i, b in enumerate(bulls[:3]):
         tw2 = bd.textlength(f"0{i+1}", font=_f(15,True))
         bd.rectangle([(30,y+2),(30+32,y+32)], fill=C["accent"])
         bd.text((30+(32-tw2)//2, y+7), f"0{i+1}", font=_f(15,True), fill=(255,255,255))
-        bd.text((70, y+4), b[:18], font=_f(28), fill=C["bd"]); y += 54
+        _safe_text(bd, (70, y+4), b, font=_f(28), fill=C["bd"], max_width=LW-80); y += 54
     if tip and y < AB-60:
         bd.rectangle([(22,y+8),(LW-4,y+52)], fill=C["acdk"])
-        bd.text((36, y+16), f"💡 {tip[:26]}", font=_f(22), fill=(255,215,135))
+        _safe_text(bd, (36, y+16), f"💡 {tip}", font=_f(22), fill=(255,215,135), max_width=LW-48)
     base_arr = np.array(base)
 
     # ── 右側動態渲染 ──
