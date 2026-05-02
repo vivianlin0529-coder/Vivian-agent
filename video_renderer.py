@@ -10,7 +10,10 @@ from __future__ import annotations
 import textwrap, requests, io, numpy as np
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
-from moviepy.editor import AudioFileClip, VideoClip, concatenate_videoclips
+try:
+    from moviepy.editor import AudioFileClip, VideoClip, concatenate_videoclips
+except ImportError:
+    from moviepy import AudioFileClip, VideoClip, concatenate_videoclips
 
 W, H   = 1920, 1080
 FPS    = 15
