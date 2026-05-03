@@ -125,17 +125,19 @@ def _audio_dur(path):
 # Unsplash 真實照片下載
 # ══════════════════════════════════════════════════════
 
-# ── Pexels 照片庫（直連，無需 API key）────────────────────────────────
+# ── Pexels 辦公室情境照片庫（直連，均為真實辦公室/職場場景）─────────
 PEXELS_PAIN = [
-    "https://images.pexels.com/photos/3760810/pexels-photo-3760810.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    # 辦公室壓力/加班/電腦前焦慮
+    "https://images.pexels.com/photos/5699678/pexels-photo-5699678.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/4101143/pexels-photo-4101143.jpeg?auto=compress&cs=tinysrgb&w=1920",
-    "https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1920",
-    "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3760810/pexels-photo-3760810.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/7688336/pexels-photo-7688336.jpeg?auto=compress&cs=tinysrgb&w=1920",
 ]
 PEXELS_WIN = [
+    # 成功會議/簡報呈現/團隊協作
     "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=1920",
-    "https://images.pexels.com/photos/1181533/pexels-photo-1181533.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/5255215/pexels-photo-5255215.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=1920",
 ]
 
@@ -373,11 +375,11 @@ def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     pi.paste(left_img, (0, AY))
     pd2.rectangle([(0,AY),(LW+18,AB)], fill=(255,232,228))
 
-    pd2.text((36, AY+22), "😩  工作中的你", font=_f(42,True), fill=C["pain_r"])
+    pd2.text((36, AY+22), "■  工作中的你", font=_f(42,True), fill=C["pain_r"])
     pd2.rectangle([(36, AY+76),(LW-18, AY+80)], fill=C["pain_r"])
     y = AY + 96
     for pt in pain_pts[:4]:
-        _safe_text(pd2, (36,y), f"✕  {pt}", font=_f(32), fill=C["pain_txt"], max_width=LW-50)
+        _safe_text(pd2, (36,y), f"× {pt}", font=_f(32), fill=C["pain_txt"], max_width=LW-50)
         y += 56
 
     # 右側：真實照片
@@ -386,11 +388,11 @@ def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
         pi.paste(ph_with_overlay, (RX, AY))
         # 照片上加大紅X
         pd2.text((RX + RW//2 - 80, AY + AH//2 - 100),
-                 "✕", font=_f(200,True), fill=(220,30,20,180))
+                 "×", font=_f(200,True), fill=(220,30,20,180))
     else:
         # fallback：信箱模擬
         pd2.rectangle([(RX,AY),(W-12,AB)], fill=(255,242,240))
-        pd2.text((RX+40, AY+40), "📧  47 封未讀信件等你處理",
+        pd2.text((RX+40, AY+40), "收件匣：47 封未讀信件",
                  font=_f(36,True), fill=C["pain_r"])
     pd2.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=C["pain_r"], width=4)
     pain_arr = np.array(pi)
@@ -402,22 +404,22 @@ def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     wi_left = Image.new("RGB", (LW+18, AH), (224,248,228))
     wi.paste(wi_left, (0, AY))
     wd2.rectangle([(0,AY),(LW+18,AB)], fill=(224,248,228))
-    wd2.text((36, AY+22), "🚀  用 AI 之後", font=_f(42,True), fill=C["win_g"])
+    wd2.text((36, AY+22), "■  用 AI 之後", font=_f(42,True), fill=C["win_g"])
     wd2.rectangle([(36, AY+76),(LW-18, AY+80)], fill=C["win_g"])
     y = AY + 96
     for wt in win_pts[:4]:
-        _safe_text(wd2, (36,y), f"✅  {wt}", font=_f(32), fill=C["win_txt"], max_width=LW-50)
+        _safe_text(wd2, (36,y), f"√ {wt}", font=_f(32), fill=C["win_txt"], max_width=LW-50)
         y += 56
 
     # 右側：成果照片
     if win_photo:
         ph_with_overlay = _photo_with_overlay(win_photo, RW, AH, (10,60,20), 50)
         wi.paste(ph_with_overlay, (RX, AY))
-        wd2.text((RX+20, AY+16), "✅  AI 30秒搞定",
+        wd2.text((RX+20, AY+16), "√ AI 30秒搞定",
                  font=_f(44,True), fill=(255,255,255))
     else:
         wd2.rectangle([(RX,AY),(W-12,AB)], fill=(240,252,242))
-        wd2.text((RX+40, AY+40), "✅  AI 整理完成",
+        wd2.text((RX+40, AY+40), "√ AI 整理完成",
                  font=_f(44,True), fill=C["win_g"])
     wd2.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=C["win_g"], width=4)
     win_arr = np.array(wi)
