@@ -28,7 +28,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r stock-screener/requirements.txt
+          pip install yfinance pandas numpy requests twstock openpyxl
+          pip install pandas-ta || pip install git+https://github.com/twopirllc/pandas-ta.git@development
 
       - name: Check trading day (skip holidays)
         id: check_day
