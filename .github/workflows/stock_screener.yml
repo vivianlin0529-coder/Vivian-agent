@@ -28,10 +28,9 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install yfinance pandas numpy requests twstock openpyxl
-          pip install pandas-ta || pip install git+https://github.com/twopirllc/pandas-ta.git@development
+          pip install -r stock-screener/requirements.txt
 
-      - name: Check trading day (skip holidays)
+      - name: Check trading day
         id: check_day
         run: |
           python - << 'EOF'
@@ -48,7 +47,7 @@ jobs:
               datetime.date(2026, 10, 10),
           }
           is_holiday = today in TW_HOLIDAYS
-          print(f"今日 {today}：{'國定假日，跳過' if is_holiday else '交易日，開始選股'}")
+          print(f"今日 {today}：{'國定假日跳過' if is_holiday else '交易日，開始選股'}")
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write(f"is_holiday={'true' if is_holiday else 'false'}\n")
           EOF
@@ -59,6 +58,7 @@ jobs:
           GMAIL_USER:    ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PWD: ${{ secrets.GMAIL_APP_PWD }}
           MAIL_TO:       ${{ secrets.MAIL_TO }}
+          TRIAL_N:       ${{ github.event.inputs.trial_n }}
         run: |
           cd stock-screener
           python stock_screener_v6.py
