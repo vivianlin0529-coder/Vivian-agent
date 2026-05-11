@@ -30,8 +30,9 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install google-genai requests notion-client moviepy pillow numpy \
-                      google-api-python-client google-auth-httplib2 google-auth-oauthlib
+          pip install google-genai requests notion-client moviepy==1.0.3 pillow numpy \
+                      google-api-python-client google-auth-httplib2 google-auth-oauthlib \
+                      edge-tts imageio-ffmpeg
 
       - name: Restore YouTube OAuth token
         run: |
