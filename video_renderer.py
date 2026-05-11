@@ -127,32 +127,109 @@ def _audio_dur(path):
 
 # ── Pexels 辦公室情境照片庫（直連，均為真實辦公室/職場場景）─────────
 PEXELS_PAIN = [
-    # 辦公室壓力/加班/電腦前焦慮
+    # ── 痛點情境圖庫（辦公室壓力/加班/焦慮）
     "https://images.pexels.com/photos/5699678/pexels-photo-5699678.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/4101143/pexels-photo-4101143.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/3760810/pexels-photo-3760810.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/7688336/pexels-photo-7688336.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3799832/pexels-photo-3799832.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/4491461/pexels-photo-4491461.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/1496193/pexels-photo-1496193.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=1920",
 ]
 PEXELS_WIN = [
-    # 成功會議/簡報呈現/團隊協作
+    # ── 成功/效率/成果圖庫
     "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/5255215/pexels-photo-5255215.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/1181354/pexels-photo-1181354.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3184433/pexels-photo-3184433.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/7688160/pexels-photo-7688160.jpeg?auto=compress&cs=tinysrgb&w=1920",
+]
+
+# ── Hook 主題設定（6種輪替，每篇視覺完全不同）──
+HOOK_THEMES = [
+    # 主題 0：紅色警示 — 標準版（原版改良）
+    dict(
+        pain_bg=(255, 240, 238), pain_left=(255, 225, 220),
+        pain_accent=(195, 35, 18), pain_txt=(88, 28, 12),
+        pain_label="⚠  工作中的你", pain_bullet="✗",
+        pain_overlay=(130, 15, 5), pain_overlay_alpha=70,
+        win_bg=(240, 252, 244), win_left=(220, 248, 226),
+        win_accent=(18, 132, 38), win_txt=(12, 64, 18),
+        win_label="✓  用 AI 之後", win_bullet="✓",
+        win_overlay=(8, 60, 18), win_overlay_alpha=55,
+        win_badge="AI 幫你 30 秒搞定",
+    ),
+    # 主題 1：深藍商務 — 數字衝擊
+    dict(
+        pain_bg=(235, 240, 252), pain_left=(215, 228, 250),
+        pain_accent=(30, 60, 180), pain_txt=(20, 40, 120),
+        pain_label="📊  你每天浪費的時間",  pain_bullet="▶",
+        pain_overlay=(10, 30, 100), pain_overlay_alpha=75,
+        win_bg=(235, 250, 255), win_left=(210, 242, 255),
+        win_accent=(0, 120, 200), win_txt=(0, 70, 140),
+        win_label="🚀  AI 接手後", win_bullet="▶",
+        win_overlay=(0, 60, 120), win_overlay_alpha=60,
+        win_badge="效率提升 10x",
+    ),
+    # 主題 2：橘色緊迫 — 截止日期感
+    dict(
+        pain_bg=(255, 245, 235), pain_left=(255, 230, 210),
+        pain_accent=(200, 80, 0), pain_txt=(120, 50, 0),
+        pain_label="🔥  Deadline 壓力",  pain_bullet="！",
+        pain_overlay=(140, 50, 0), pain_overlay_alpha=65,
+        win_bg=(255, 252, 235), win_left=(255, 248, 210),
+        win_accent=(180, 130, 0), win_txt=(100, 75, 0),
+        win_label="⚡  AI 加速完成", win_bullet="★",
+        win_overlay=(110, 80, 0), win_overlay_alpha=55,
+        win_badge="準時交件 不再趕",
+    ),
+    # 主題 3：暗紫科技感 — 現代感
+    dict(
+        pain_bg=(245, 238, 255), pain_left=(232, 218, 255),
+        pain_accent=(120, 30, 190), pain_txt=(70, 15, 120),
+        pain_label="😩  你卡關的地方", pain_bullet="▸",
+        pain_overlay=(80, 10, 140), pain_overlay_alpha=70,
+        win_bg=(238, 245, 255), win_left=(218, 232, 255),
+        win_accent=(30, 90, 200), win_txt=(15, 55, 130),
+        win_label="✨  AI 一鍵解決", win_bullet="◆",
+        win_overlay=(10, 50, 150), win_overlay_alpha=60,
+        win_badge="從此不再卡關",
+    ),
+    # 主題 4：黑金質感 — 高端職場
+    dict(
+        pain_bg=(245, 242, 235), pain_left=(230, 224, 208),
+        pain_accent=(120, 85, 20), pain_txt=(70, 50, 10),
+        pain_label="📌  職場痛點", pain_bullet="•",
+        pain_overlay=(60, 40, 5), pain_overlay_alpha=80,
+        win_bg=(245, 248, 240), win_left=(228, 238, 218),
+        win_accent=(50, 120, 30), win_txt=(25, 70, 15),
+        win_label="💼  AI 職場升級", win_bullet="◉",
+        win_overlay=(20, 70, 10), win_overlay_alpha=65,
+        win_badge="職場競爭力 UP",
+    ),
+    # 主題 5：青藍清新 — 輕鬆效率
+    dict(
+        pain_bg=(235, 250, 255), pain_left=(210, 240, 255),
+        pain_accent=(0, 140, 180), pain_txt=(0, 80, 110),
+        pain_label="😓  每天都在重複",  pain_bullet="→",
+        pain_overlay=(0, 80, 120), pain_overlay_alpha=65,
+        win_bg=(235, 255, 252), win_left=(210, 255, 248),
+        win_accent=(0, 160, 130), win_txt=(0, 90, 75),
+        win_label="🎯  AI 自動化搞定", win_bullet="✦",
+        win_overlay=(0, 100, 80), win_overlay_alpha=55,
+        win_badge="省時又省力",
+    ),
 ]
 
 def _fetch_photo(category: str, w: int, h: int, cache_path: str, seed: int = 0) -> Image.Image | None:
-    """從 Pexels 直連下載真實情境照片（pain=壓力辦公，win=成功協作）"""
+    """從 Pexels 下載情境照片，每次根據 seed 選不同圖（不做長期 cache）"""
     import urllib3; urllib3.disable_warnings()
 
-    if Path(cache_path).exists():
-        try:
-            img = Image.open(cache_path).convert("RGB")
-            if img.size[0] > 200:
-                print(f"  📷 快取照片：{cache_path}")
-                return img
-        except: pass
-
+    # 每次重新下載（不 cache）確保每篇不同
     urls = PEXELS_PAIN if "pain" in category else PEXELS_WIN
     url  = urls[seed % len(urls)]
 
@@ -166,13 +243,12 @@ def _fetch_photo(category: str, w: int, h: int, cache_path: str, seed: int = 0) 
         if resp.status_code == 200 and len(resp.content) > 20000:
             img = Image.open(io.BytesIO(resp.content)).convert("RGB")
             img = img.resize((w, h), Image.LANCZOS)
-            img.save(cache_path, quality=90)
-            print(f"  📷 Pexels 照片下載成功：{cache_path} ({len(resp.content)//1024}KB)")
+            print(f"  📷 照片下載成功：{category} seed={seed}")
             return img
         else:
             print(f"  ⚠️ 照片 HTTP {resp.status_code}")
-    except Exception as e:
-        print(f"  ⚠️ 照片下載失敗：{e}")
+    except Exception as ex:
+        print(f"  ⚠️ 照片下載失敗：{ex}")
     return None
 
 
@@ -185,243 +261,99 @@ def _photo_with_overlay(img: Image.Image, tw: int, th: int,
     merged = Image.alpha_composite(base, overlay)
     return merged.convert("RGB")
 
-# ══════════════════════════════════════════════════════
-# 簡報預覽圖（Gamma 風格，Step 3 專用）
-# ══════════════════════════════════════════════════════
-def _render_claude_ui(tw, th, prompt, output_lines, stream_ratio=1.0, thinking_dots=-1):
-    """真實 claude.ai 風格對話 UI（文字嚴格裁剪在框內）"""
-    img  = Image.new("RGB", (tw, th), (255,255,255))
-    draw = ImageDraw.Draw(img)
-    SIDE_W   = 180
-    CX       = SIDE_W
-    CHAT_MAX = tw - CX - 20   # 對話區最大寬度（右邊留 20px 邊距）
-
-    # ── 左側欄 ──
-    draw.rectangle([(0,0),(SIDE_W,th)], fill=(30,27,23))
-    _safe_text(draw,(12,14),"✶  Claude",_f(22,True),(255,200,100),max_width=SIDE_W-16)
-    draw.rounded_rectangle([(8,54),(SIDE_W-8,80)], radius=7,
-                            fill=(50,44,36), outline=(80,70,55), width=1)
-    _safe_text(draw,(16,60),"+ New chat",_f(15),(200,185,160),max_width=SIDE_W-20)
-    _safe_text(draw,(12,96),"Today",_f(12),(110,100,80))
-    for i,h in enumerate(["Meeting notes","Email draft","KPI report"]):
-        _safe_text(draw,(12,112+i*26),h,_f(13),(148,136,115),max_width=SIDE_W-16)
-
-    # ── 頂部 bar ──
-    draw.rectangle([(CX,0),(tw,44)], fill=(252,251,249))
-    draw.rectangle([(CX,43),(tw,44)], fill=(218,212,200))
-    _safe_text(draw,(CX+14,12),"claude-sonnet-4-5  ▾",_f(16),(100,88,68),max_width=CHAT_MAX)
-    draw.rectangle([(CX,44),(tw,th)], fill=(252,251,249))
-
-    # ── 使用者訊息氣泡（嚴格限寬） ──
-    BUBBLE_W  = min(CHAT_MAX - 16, 400)
-    BUBBLE_X  = tw - BUBBLE_W - 16
-    MSG_Y     = 56
-    clean_p   = (prompt or "").replace("▮","").strip()
-    avg_cw    = max(1, draw.textlength("測", font=_f(17)))
-    cpl       = max(8, int(BUBBLE_W / avg_cw) - 1)
-    msg_lines = []
-    for seg in clean_p.split("\n"):
-        seg = seg.strip()
-        if not seg: continue
-        msg_lines += textwrap.wrap(seg, width=cpl) or [seg[:cpl]]
-    msg_lines = msg_lines[:5]
-    MSG_H = len(msg_lines)*24 + 16
-    draw.rounded_rectangle([(BUBBLE_X, MSG_Y),(tw-14, MSG_Y+MSG_H)],
-                            radius=10, fill=(232,226,214))
-    my = MSG_Y + 8
-    for line in msg_lines:
-        _safe_text(draw,(BUBBLE_X+10,my),line,_f(17),(48,36,20),max_width=BUBBLE_W-18)
-        my += 24
-
-    # ── Claude 回覆 ──
-    RY = MSG_Y + MSG_H + 18
-    draw.ellipse([(CX+12,RY),(CX+30,RY+18)], fill=(195,135,55))
-    draw.text((CX+16,RY+2),"✶",font=_f(12,True),fill="white")
-    draw.text((CX+36,RY+2),"Claude",font=_f(15,True),fill=(75,60,38))
-    TY    = RY + 26
-    INPUT_Y = th - 58
-    MAX_Y   = INPUT_Y - 6
-
-    avg_ow = max(1, draw.textlength("測", font=_f(18)))
-    out_cpl = max(8, int(CHAT_MAX / avg_ow) - 1)
-
-    if thinking_dots >= 0:
-        dc = "●"*thinking_dots + "○"*(3-thinking_dots)
-        draw.text((CX+16,TY),"  "+dc,font=_f(24),fill=(155,135,95))
-    else:
-        total    = sum(len(l) for l in output_lines)
-        shown_ch = int(total * stream_ratio)
-        remain   = shown_ch
-        sl = []
-        for ln in output_lines:
-            if remain <= 0: break
-            sl.append(ln[:remain]); remain -= len(ln)
-        ry2 = TY
-        done = False
-        for raw in sl:
-            if done: break
-            for wl in (textwrap.wrap(raw, width=out_cpl) or [raw[:out_cpl]]):
-                if ry2 + 24 > MAX_Y: done = True; break
-                is_h = raw.startswith(("【","•","→","✅","第","*","「","『"))
-                col  = (38,22,8) if is_h else (60,45,28)
-                _safe_text(draw,(CX+16,ry2),wl,_f(18,is_h),col,max_width=CHAT_MAX)
-                ry2 += 24
-        if stream_ratio < 1.0 and ry2 - 24 < MAX_Y:
-            draw.rectangle([(CX+16+2, ry2-22),(CX+16+7, ry2-4)], fill=(155,80,35))
-
-    # ── 底部輸入框 ──
-    draw.rounded_rectangle([(CX+10,INPUT_Y),(tw-10,th-10)], radius=9,
-                            fill="white", outline=(205,195,178), width=1)
-    _safe_text(draw,(CX+24,INPUT_Y+12),"Message Claude…",
-               _f(17),(175,158,132),max_width=CHAT_MAX-50)
-    draw.rounded_rectangle([(tw-46,INPUT_Y+5),(tw-14,th-14)], radius=7, fill=(30,27,23))
-    draw.text((tw-36,INPUT_Y+10),"↑",font=_f(19,True),fill="white")
-    return img
-
-
-
-def _render_slide_preview(outline_items: list[str], title: str,
-                           tw: int, th: int) -> Image.Image:
-    """渲染一張 Gamma 風格的簡報預覽，看起來像真的投影片"""
-    img  = Image.new("RGB", (tw, th), (248, 247, 252))
-    draw = ImageDraw.Draw(img)
-
-    # ── Gamma 風格頂部 bar ──
-    draw.rectangle([(0,0),(tw,48)], fill=(92,60,220))
-    draw.text((14,10), "⚡  Gamma — AI 簡報預覽", font=_f(22,True), fill="white")
-    # 三點
-    for cx, col in [(tw-60,"#FF5F57"),(tw-40,"#FEBC2E"),(tw-20,"#28C840")]:
-        draw.ellipse([(cx-6,18),(cx+6,30)], fill=col)
-
-    # ── 縮圖列（模擬左側投影片清單）──
-    THUMB_W = 110
-    draw.rectangle([(0,48),(THUMB_W,th)], fill=(238,236,248))
-    slide_colors = ["#5C3CDC","#4A90D9","#27AE60","#E67E22","#E74C3C"]
-    for i, col in enumerate(slide_colors[:min(5,len(outline_items)+1)]):
-        y0 = 58 + i*80
-        draw.rectangle([(8,y0),(THUMB_W-8,y0+68)],
-                        fill=col, outline="white", width=2)
-        label = f"0{i+1}" if i < len(outline_items) else "封底"
-        lw2 = draw.textlength(label, font=_f(16,True))
-        draw.text(((THUMB_W-lw2)//2, y0+22), label, font=_f(16,True), fill="white")
-        if i == 0:  # 選中高亮
-            draw.rectangle([(4,y0-2),(THUMB_W-4,y0+70)],
-                            outline=(92,60,220), width=3, fill=None)
-
-    # ── 主投影片預覽（第一張：封面）──
-    MX, MY = THUMB_W + 12, 58
-    MW, MH = tw - MX - 8, th - MY - 8
-    # 投影片背景（漸層效果用兩層）
-    for i in range(MH):
-        r = int(92 + (108-92)*(i/MH))
-        g = int(60 + (80-60)*(i/MH))
-        b = int(220 + (200-220)*(i/MH))
-        draw.line([(MX, MY+i),(MX+MW, MY+i)], fill=(r,g,b))
-
-    # 投影片內容
-    CX = MX + MW//2
-    # 標題
-    sl_title = title[:20] if title else "AI 自動生成簡報"
-    tw2 = draw.textlength(sl_title, font=_f(42,True))
-    draw.text((CX-tw2//2, MY+50), sl_title, font=_f(42,True), fill="white")
-    # 副標
-    draw.rectangle([(MX+40, MY+110),(MX+MW-40, MY+114)], fill=(255,255,255,120))
-    sub = "Vivi AI研習社  |  AI 職場實戰系列"
-    sw = draw.textlength(sub, font=_f(22))
-    draw.text((CX-sw//2, MY+122), sub, font=_f(22), fill=(220,210,255))
-
-    # 大綱預覽（第一張之後的清單）
-    draw.rectangle([(MX+30, MY+170),(MX+MW-30, MY+172)], fill=(255,255,255,80))
-    y_item = MY + 188
-    for i, item in enumerate(outline_items[:4]):
-        num_txt = f"0{i+1}"
-        draw.ellipse([(MX+40, y_item),(MX+64, y_item+24)], fill=(255,255,255,80))
-        nw2 = draw.textlength(num_txt, font=_f(16,True))
-        draw.text((MX+40+(24-nw2)//2, y_item+2), num_txt, font=_f(16,True), fill=(92,60,220))
-        draw.text((MX+72, y_item+2), item[:24], font=_f(24), fill="white")
-        y_item += 44
-
-    # ── 底部工具列 ──
-    draw.rectangle([(0, th-38),(tw, th)], fill=(228,225,245))
-    tools = ["🖼️ 主題", "✏️ 編輯", "📊 圖表", "🤖 AI 生成", "▶ 簡報模式"]
-    tx = 14
-    for tool_name in tools:
-        tw3 = draw.textlength(tool_name, font=_f(18))
-        draw.text((tx, th-28), tool_name, font=_f(18), fill=(60,40,160))
-        tx += tw3 + 28
-
-    return img
 
 # ══════════════════════════════════════════════════════
-# Hook clip（真實照片版）
+# Hook clip（6 主題輪替版）
 # ══════════════════════════════════════════════════════
 def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     pd = _audio_dur(pain_audio); wd = _audio_dur(win_audio)
 
-    # ── 下載封面照片 ──
-    # 根據選題 seed 選不同照片（避免每天一樣）
-    import datetime as _dt
-    _seed = _dt.date.today().toordinal()
-    pain_photo = _fetch_photo("pain", RW, AH, "cover_pain.jpg", seed=_seed)
-    win_photo  = _fetch_photo("win",  RW, AH, "cover_win.jpg",  seed=_seed)
+    # ── 根據 title hash + 日期選主題與照片 seed（確保每篇不同）──
+    import datetime as _dt, hashlib as _hl
+    day_ord   = _dt.date.today().toordinal()
+    title_h   = int(_hl.md5(title.encode()).hexdigest(), 16)
+    combined  = day_ord ^ title_h
 
-    # ── Pain 幀 ──
-    pi = Image.new("RGB", (W,H), (255,244,242))
+    theme_idx  = combined % len(HOOK_THEMES)
+    pain_seed  = combined % len(PEXELS_PAIN)
+    win_seed   = (combined + 4) % len(PEXELS_WIN)   # 偏移避免巧合同一張
+    T = HOOK_THEMES[theme_idx]
+
+    print(f"  🎨 Hook 主題 #{theme_idx}  痛點圖 seed={pain_seed}  成果圖 seed={win_seed}")
+
+    pain_photo = _fetch_photo("pain", RW, AH, f"tmp_pain_{pain_seed}.jpg", seed=pain_seed)
+    win_photo  = _fetch_photo("win",  RW, AH, f"tmp_win_{win_seed}.jpg",  seed=win_seed)
+
+    # ══ Pain 幀 ══
+    pi  = Image.new("RGB", (W, H), T["pain_bg"])
     pd2 = ImageDraw.Draw(pi)
     _top(pd2, title); _bot(pd2)
 
-    # 左側半透明背景
-    left_img = Image.new("RGB", (LW+18, AH), (255,232,228))
-    pi.paste(left_img, (0, AY))
-    pd2.rectangle([(0,AY),(LW+18,AB)], fill=(255,232,228))
+    pd2.rectangle([(0, AY), (LW+18, AB)], fill=T["pain_left"])
 
-    pd2.text((36, AY+22), "■  工作中的你", font=_f(42,True), fill=C["pain_r"])
-    pd2.rectangle([(36, AY+76),(LW-18, AY+80)], fill=C["pain_r"])
-    y = AY + 96
+    # 左上標題區
+    pd2.text((36, AY+22), T["pain_label"], font=_f(40, True), fill=T["pain_accent"])
+    pd2.rectangle([(36, AY+74), (LW-18, AY+78)], fill=T["pain_accent"])
+
+    # 痛點列表
+    y = AY + 98
     for pt in pain_pts[:4]:
-        _safe_text(pd2, (36,y), f"× {pt}", font=_f(32), fill=C["pain_txt"], max_width=LW-50)
-        y += 56
+        _safe_text(pd2, (36, y), f"{T['pain_bullet']}  {pt}",
+                   font=_f(30), fill=T["pain_txt"], max_width=LW-50)
+        y += 58
 
-    # 右側：真實照片
+    # 右側照片
     if pain_photo:
-        ph_with_overlay = _photo_with_overlay(pain_photo, RW, AH, (120,20,10), 60)
-        pi.paste(ph_with_overlay, (RX, AY))
-        # 照片上加大紅X
-        pd2.text((RX + RW//2 - 80, AY + AH//2 - 100),
-                 "×", font=_f(200,True), fill=(220,30,20,180))
+        ph = _photo_with_overlay(pain_photo, RW, AH,
+                                  T["pain_overlay"], T["pain_overlay_alpha"])
+        pi.paste(ph, (RX, AY))
+        # 大 emoji / 符號疊加
+        pd2.text((RX + RW//2 - 90, AY + AH//2 - 110),
+                 "✗", font=_f(180, True), fill=(220, 30, 20))
     else:
-        # fallback：信箱模擬
-        pd2.rectangle([(RX,AY),(W-12,AB)], fill=(255,242,240))
-        pd2.text((RX+40, AY+40), "收件匣：47 封未讀信件",
-                 font=_f(36,True), fill=C["pain_r"])
-    pd2.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=C["pain_r"], width=4)
+        pd2.rectangle([(RX, AY), (W-12, AB)], fill=T["pain_left"])
+        pd2.text((RX+40, AY+40), "收件匣：47 封未讀",
+                 font=_f(36, True), fill=T["pain_accent"])
+
+    pd2.rectangle([(RX-2, AY-2), (W-12, AB+2)],
+                  outline=T["pain_accent"], width=5)
     pain_arr = np.array(pi)
 
-    # ── Win 幀 ──
-    wi = Image.new("RGB", (W,H), (242,252,244))
+    # ══ Win 幀 ══
+    wi  = Image.new("RGB", (W, H), T["win_bg"])
     wd2 = ImageDraw.Draw(wi)
     _top(wd2, title); _bot(wd2)
-    wi_left = Image.new("RGB", (LW+18, AH), (224,248,228))
-    wi.paste(wi_left, (0, AY))
-    wd2.rectangle([(0,AY),(LW+18,AB)], fill=(224,248,228))
-    wd2.text((36, AY+22), "■  用 AI 之後", font=_f(42,True), fill=C["win_g"])
-    wd2.rectangle([(36, AY+76),(LW-18, AY+80)], fill=C["win_g"])
-    y = AY + 96
-    for wt in win_pts[:4]:
-        _safe_text(wd2, (36,y), f"√ {wt}", font=_f(32), fill=C["win_txt"], max_width=LW-50)
-        y += 56
 
-    # 右側：成果照片
+    wd2.rectangle([(0, AY), (LW+18, AB)], fill=T["win_left"])
+
+    wd2.text((36, AY+22), T["win_label"], font=_f(40, True), fill=T["win_accent"])
+    wd2.rectangle([(36, AY+74), (LW-18, AY+78)], fill=T["win_accent"])
+
+    y = AY + 98
+    for wt in win_pts[:4]:
+        _safe_text(wd2, (36, y), f"{T['win_bullet']}  {wt}",
+                   font=_f(30), fill=T["win_txt"], max_width=LW-50)
+        y += 58
+
     if win_photo:
-        ph_with_overlay = _photo_with_overlay(win_photo, RW, AH, (10,60,20), 50)
-        wi.paste(ph_with_overlay, (RX, AY))
-        wd2.text((RX+20, AY+16), "√ AI 30秒搞定",
-                 font=_f(44,True), fill=(255,255,255))
+        ph = _photo_with_overlay(win_photo, RW, AH,
+                                  T["win_overlay"], T["win_overlay_alpha"])
+        wi.paste(ph, (RX, AY))
+        # 成果 badge
+        badge = T["win_badge"]
+        bw = wd2.textlength(badge, font=_f(38, True)) + 40
+        bx = RX + (RW - bw) // 2
+        by = AY + 24
+        wd2.rectangle([(bx-4, by-4), (bx+bw+4, by+56)],
+                       fill=T["win_accent"])
+        wd2.text((bx+20, by+8), badge, font=_f(38, True), fill=(255, 255, 255))
     else:
-        wd2.rectangle([(RX,AY),(W-12,AB)], fill=(240,252,242))
-        wd2.text((RX+40, AY+40), "√ AI 整理完成",
-                 font=_f(44,True), fill=C["win_g"])
-    wd2.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=C["win_g"], width=4)
+        wd2.rectangle([(RX, AY), (W-12, AB)], fill=T["win_left"])
+        wd2.text((RX+40, AY+40), T["win_badge"],
+                 font=_f(40, True), fill=T["win_accent"])
+
+    wd2.rectangle([(RX-2, AY-2), (W-12, AB+2)],
+                  outline=T["win_accent"], width=5)
     win_arr = np.array(wi)
 
     pc = VideoClip(lambda t: pain_arr, duration=pd)
