@@ -595,6 +595,148 @@ def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     return concatenate_videoclips([pc, wc], method="compose")
 
 
+
+# ══════════════════════════════════════════════════════
+# Claude UI 渲染（Claude.ai 風格）
+# ══════════════════════════════════════════════════════
+def _render_claude_ui(pw: int, ph: int, prompt_text: str, out_lines: list,
+                      ratio: float, dots: int) -> "Image.Image":
+    """渲染 Claude.ai 風格聊天面板，返回 PIL Image (pw, ph)。"""
+    BG         = (255, 253, 249)
+    SIDEBAR_BG = (250, 247, 241)
+    HUMAN_BG   = (237, 233, 225)
+    CLAUDE_BG  = (255, 255, 255)
+    CLAUDE_ORG = (217, 119, 87)
+    TEXT_DK    = (25, 20, 15)
+    TEXT_MD    = (80, 65, 50)
+    TEXT_LT    = (140, 120, 100)
+    SEP_COL    = (220, 210, 195)
+
+    img = Image.new("RGB", (pw, ph), BG)
+    d   = ImageDraw.Draw(img)
+
+    # Top bar
+    TB = 50
+    d.rectangle([(0, 0), (pw, TB)], fill=SIDEBAR_BG)
+    d.rectangle([(0, TB), (pw, TB + 2)], fill=SEP_COL)
+    d.ellipse([(14, 12), (38, 38)], fill=CLAUDE_ORG)
+    d.text((50, 12), "Claude", font=_f(28, True), fill=TEXT_DK)
+    d.text((50 + int(d.textlength("Claude", font=_f(28, True))) + 10, 19),
+           "claude.ai", font=_f(18), fill=TEXT_LT)
+
+    PAD      = 18
+    bx       = PAD + 16
+    fnt_body = _f(22)
+    avg_cw   = max(1, int(d.textlength("測", font=fnt_body)))
+    bubble_w = pw - bx - PAD - 8
+    wrap_w   = max(10, bubble_w // avg_cw)
+
+    # Human message
+    msg_top = TB + 18
+    d.text((bx, msg_top), "你", font=_f(20, True), fill=CLAUDE_ORG)
+    bubble_top = msg_top + 28
+    lines_p = []
+    for seg in (prompt_text or "").split("\n"):
+        lines_p.extend(textwrap.wrap(seg, width=wrap_w) or [""])
+    bubble_h = max(44, len(lines_p) * 29 + 16)
+    bubble_bot = bubble_top + bubble_h
+    d.rectangle([(bx, bubble_top), (bx + bubble_w, bubble_bot)],
+                fill=HUMAN_BG, outline=SEP_COL, width=1)
+    ty = bubble_top + 8
+    for ln in lines_p:
+        if ty + 27 > bubble_bot - 4: break
+        d.text((bx + 10, ty), ln, font=fnt_body, fill=TEXT_DK)
+        ty += 29
+
+    # Divider
+    div_y = bubble_bot + 16
+    d.rectangle([(PAD, div_y), (pw - PAD, div_y + 1)], fill=SEP_COL)
+
+    # Claude response
+    resp_top = div_y + 18
+    if resp_top + 30 > ph - PAD:
+        return img
+    d.text((bx, resp_top), "Claude", font=_f(20, True), fill=CLAUDE_ORG)
+    resp_top += 30
+
+    resp_bot = ph - PAD
+    if resp_top >= resp_bot:
+        return img
+
+    if dots == -2:
+        # 打字中：空白輸出區 + 游標
+        d.rectangle([(bx, resp_top), (bx + bubble_w, min(resp_top + 46, resp_bot))],
+                    fill=CLAUDE_BG, outline=SEP_COL, width=1)
+        d.text((bx + 10, resp_top + 10), "▋", font=fnt_body, fill=TEXT_MD)
+    elif dots >= 0:
+        # 思考中
+        d.rectangle([(bx, resp_top), (bx + bubble_w, min(resp_top + 46, resp_bot))],
+                    fill=CLAUDE_BG, outline=SEP_COL, width=1)
+        dc = "●" * dots + "○" * (3 - dots)
+        d.text((bx + 10, resp_top + 10), f"思考中  {dc}", font=fnt_body, fill=TEXT_MD)
+    else:
+        # 輸出串流
+        d.rectangle([(bx, resp_top), (bx + bubble_w, resp_bot)],
+                    fill=CLAUDE_BG, outline=SEP_COL, width=1)
+        oy = resp_top + 8
+        max_lines = max(1, (resp_bot - resp_top - 12) // 29)
+        for ln in (out_lines or [])[:max_lines]:
+            if oy + 27 > resp_bot - 4: break
+            col = CLAUDE_ORG if ln.startswith(
+                ("•", "【", "✅", "⚠️", "→", "—", "📌", "💡",
+                 "第", "0", "1", "2", "3", "4", "5")) else TEXT_DK
+            while ln and d.textlength(ln, font=fnt_body) > bubble_w - 22:
+                ln = ln[:-1]
+            d.text((bx + 10, oy), ln, font=fnt_body, fill=col)
+            oy += 29
+        if ratio < 1.0 and oy + 27 < resp_bot - 4:
+            d.text((bx + 10, oy), "▋", font=fnt_body, fill=TEXT_MD)
+    return img
+
+
+# ══════════════════════════════════════════════════════
+# Gamma 風格投影片預覽渲染
+# ══════════════════════════════════════════════════════
+def _render_slide_preview(outline_items: list, title: str,
+                          pw: int, ph: int) -> "Image.Image":
+    """渲染 Gamma 風格投影片大綱預覽，返回 PIL Image (pw, ph)。"""
+    SLIDE_BG   = (28, 22, 48)
+    SLIDE_CARD = (44, 36, 68)
+    SLIDE_ACC  = (92, 60, 220)
+    SLIDE_FG   = (240, 235, 255)
+    SLIDE_DIM  = (160, 145, 200)
+
+    img = Image.new("RGB", (pw, ph), SLIDE_BG)
+    d   = ImageDraw.Draw(img)
+
+    # 標題列
+    d.rectangle([(0, 0), (pw, 54)], fill=SLIDE_ACC)
+    _safe_text(d, (16, 13), f"🎬 {title}", font=_f(24, True),
+               fill=(255, 255, 255), max_width=pw - 32)
+
+    # 投影片卡片
+    PAD    = 14
+    y      = 66
+    n      = max(1, len(outline_items))
+    card_h = max(38, (ph - 72 - PAD) // n - 8)
+    for i, item in enumerate(outline_items):
+        if y + card_h > ph - PAD: break
+        d.rectangle([(PAD, y), (pw - PAD, y + card_h)],
+                    fill=SLIDE_CARD, outline=SLIDE_ACC, width=2)
+        NW = 32
+        d.rectangle([(PAD, y), (PAD + NW, y + card_h)], fill=SLIDE_ACC)
+        d.text((PAD + 7, y + card_h // 2 - 13), str(i + 1),
+               font=_f(20, True), fill=(255, 255, 255))
+        _safe_text(d, (PAD + NW + 10, y + card_h // 2 - 13), item,
+                   font=_f(22), fill=SLIDE_FG,
+                   max_width=pw - PAD * 2 - NW - 22)
+        y += card_h + 8
+
+    d.text((pw - 90, ph - 30), "Gamma ✦", font=_f(18), fill=SLIDE_DIM)
+    return img
+
+
+
 # ══════════════════════════════════════════════════════
 # Step clip（打字動畫 + 輸出串流，支援簡報預覽）
 # ══════════════════════════════════════════════════════
