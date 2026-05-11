@@ -99,32 +99,96 @@ def research_benchmark_accounts() -> dict:
     return result
 
 # ═══════════════════════════════════════════
+# ═══════════════════════════════════════════
+# 選題歷史記錄（避免重複）
+# ═══════════════════════════════════════════
+USED_TOPICS_FILE = "used_topics.json"
+
+def load_used_topics() -> list:
+    """載入過去 60 天內已用過的選題標題清單"""
+    if not Path(USED_TOPICS_FILE).exists():
+        return []
+    try:
+        with open(USED_TOPICS_FILE, encoding="utf-8") as f:
+            records = json.load(f)
+        cutoff = (datetime.datetime.now() - datetime.timedelta(days=60)).isoformat()
+        recent = [r["title"] for r in records if r.get("date", "") >= cutoff]
+        return recent
+    except Exception:
+        return []
+
+def save_used_topic(title: str):
+    """將本次選題記錄進歷史檔"""
+    records = []
+    if Path(USED_TOPICS_FILE).exists():
+        try:
+            with open(USED_TOPICS_FILE, encoding="utf-8") as f:
+                records = json.load(f)
+        except Exception:
+            records = []
+    records.append({"title": title, "date": datetime.datetime.now().isoformat()})
+    records = records[-120:]
+    with open(USED_TOPICS_FILE, "w", encoding="utf-8") as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
+    print(f"  📚 選題已記錄（歷史共 {len(records)} 筆）")
+
 # 任務二：爆款選題分析
 # ═══════════════════════════════════════════
 def analyze_viral_topics(manual_topic: str = "", manual_tool: str = "") -> list:
-    print("\n💡 任務二：爆款選題分析...")
+    print("\n💡 任務二：爆款選題分析（搜尋市場趨勢）...")
     if manual_topic:
         tool = manual_tool or "Claude"
         return [{"title": manual_topic, "score": 10, "keyword": manual_topic,
                  "appeal": "用戶指定", "algorithm": "手動選題", "reason": "手動指定",
                  "tool": tool}]
-    prompt = """
-針對台灣非技術背景上班族，為「Vivi AI研習社」提供 5 個爆款短影片選題。
-每個選題必須：
-- 是「某個 AI 工具的具體操作教學」（例如：用 Claude 整理會議記錄、用 Gamma 做簡報）
-- 有 3 個可截圖示意的操作步驟
-- 60 秒內能說清楚
-- 指定一個主要工具（Claude / Gamma / Notion AI / ChatGPT / Canva AI 等）
-輸出 JSON 陣列：
-[{"title":"...","appeal":"...","algorithm":"...","keyword":"...","tool":"...","score":9,"reason":"..."}]
+
+    used = load_used_topics()
+    used_block = ""
+    if used:
+        used_list = "\n".join(f"- {t}" for t in used[-30:])
+        used_block = f"\n\n【已用過的選題，請完全避開，不得重複或相似】\n{used_list}"
+
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    prompt = f"""
+今天是 {today}。你是「Vivi AI研習社」的內容策略師，請用 Google 搜尋，找出當前台灣職場上班族最感興趣的 AI 工具話題。
+
+研究方向：
+1. 搜尋「台灣 AI 工具 職場 2025」「AI 教學 上班族 短影片」找熱門話題
+2. 搜尋 YouTube 上「AI工具教學」「ChatGPT教學」「Notion AI」等的近期爆款影片標題
+3. 搜尋 PTT、Dcard 上 AI 工具的近期熱門討論
+4. 找出最近有新功能發布的 AI 工具（ChatGPT / Claude / Gemini / Notion AI / Canva AI / Gamma / Perplexity）
+
+基於以上市場研究，提供 10 個爆款短影片選題，每個必須：
+- 針對台灣非技術背景上班族（PM、業務、行政、主管）
+- 是「某個 AI 工具的具體操作教學」，有 3 個可示意的步驟
+- 60 秒內說清楚
+- 標題有具體數字或成果（「省 X 小時」「X 步驟」「0 元」）
+- 指定主要工具（Claude / Gamma / Notion AI / ChatGPT / Canva AI / Perplexity 等）{used_block}
+
+輸出 JSON 陣列（10 個，依市場潛力評分 1-10）：
+[{{"title":"...","appeal":"...","algorithm":"...","keyword":"...","tool":"...","score":9,"reason":"..."}}]
 """
-    topics = _gemini_json(prompt, array=True)
+    topics = _gemini_json(prompt, use_search=True, array=True)
     if not topics:
         topics = [{"title": "3步驟用Claude整理會議記錄，省下2小時", "score": 9,
                    "keyword": "Claude 教學 會議記錄", "tool": "Claude",
                    "appeal": "具體省時數字", "algorithm": "搜尋量高", "reason": "fallback"}]
-    topics.sort(key=lambda x: x.get("score", 0), reverse=True)
-    return topics
+
+    # 排除與歷史選題字元重疊度過高的
+    def _is_similar(title: str, used_list: list) -> bool:
+        chars = set(title)
+        for u in used_list:
+            overlap = len(chars & set(u)) / max(len(chars), 1)
+            if overlap > 0.6:
+                return True
+        return False
+
+    fresh = [t for t in topics if not _is_similar(t.get("title", ""), used)]
+    if not fresh:
+        fresh = topics  # 若全部相似則直接用原清單
+
+    fresh.sort(key=lambda x: x.get("score", 0), reverse=True)
+    return fresh
 
 # ═══════════════════════════════════════════
 # 任務三：YouTube 參考影片搜尋
@@ -460,6 +524,9 @@ def main():
     if videos:
         videos = analyze_video_outliers(videos, keyword)
         write_to_notion(videos, benchmark, best["title"])
+
+    # 記錄本次選題，避免未來重複
+    save_used_topic(best["title"])
 
     narration, title, description, tags, steps, narrations = generate_script(best)
     seg_files = generate_voice_segments(narrations)
