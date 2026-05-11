@@ -1,8 +1,8 @@
-name: 台股蓄勢選股 — 每日 13:30 自動掃描
+name: 台股蓄勢選股 — 每日 07:00 自動掃描
 
 on:
   schedule:
-    - cron: "30 5 * * 1-5"
+    - cron: "0 23 * * 0-4"
   workflow_dispatch:
     inputs:
       trial_n:
@@ -58,6 +58,7 @@ jobs:
           GMAIL_USER:    ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PWD: ${{ secrets.GMAIL_APP_PWD }}
           MAIL_TO:       ${{ secrets.MAIL_TO }}
+          TRIAL_N:       ${{ github.event.inputs.trial_n }}
         run: |
           cd stock-screener
           python stock_screener_v6.py

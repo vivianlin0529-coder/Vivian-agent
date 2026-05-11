@@ -1,8 +1,8 @@
-name: 台股蓄勢選股 — 每日 13:30 自動掃描
+name: 台股蓄勢選股 — 每日 07:00 自動掃描
 
 on:
   schedule:
-    - cron: "30 5 * * 1-5"
+    - cron: "0 23 * * 0-4"
   workflow_dispatch:
     inputs:
       trial_n:
