@@ -99,26 +99,25 @@ def research_benchmark_accounts() -> dict:
     return result
 
 # ═══════════════════════════════════════════
+# 選題歷史記錄（每日 Top5 + 已發布）
 # ═══════════════════════════════════════════
-# 選題歷史記錄（避免重複）
-# ═══════════════════════════════════════════
-USED_TOPICS_FILE = "used_topics.json"
+USED_TOPICS_FILE   = "used_topics.json"
+TOPIC_RANKING_FILE = "topic_rankings.json"
 
 def load_used_topics() -> list:
-    """載入過去 60 天內已用過的選題標題清單"""
+    """已發布的選題標題清單（過去 60 天）"""
     if not Path(USED_TOPICS_FILE).exists():
         return []
     try:
         with open(USED_TOPICS_FILE, encoding="utf-8") as f:
             records = json.load(f)
         cutoff = (datetime.datetime.now() - datetime.timedelta(days=60)).isoformat()
-        recent = [r["title"] for r in records if r.get("date", "") >= cutoff]
-        return recent
+        return [r["title"] for r in records if r.get("date", "") >= cutoff]
     except Exception:
         return []
 
 def save_used_topic(title: str):
-    """將本次選題記錄進歷史檔"""
+    """記錄本次已發布的選題"""
     records = []
     if Path(USED_TOPICS_FILE).exists():
         try:
@@ -130,66 +129,162 @@ def save_used_topic(title: str):
     records = records[-120:]
     with open(USED_TOPICS_FILE, "w", encoding="utf-8") as f:
         json.dump(records, f, ensure_ascii=False, indent=2)
-    print(f"  📚 選題已記錄（歷史共 {len(records)} 筆）")
+    print(f"  📚 已發布選題記錄更新（共 {len(records)} 筆）")
+
+def save_daily_top5(topics: list):
+    """儲存今日 Top5 候選到排名歷史"""
+    records = []
+    if Path(TOPIC_RANKING_FILE).exists():
+        try:
+            with open(TOPIC_RANKING_FILE, encoding="utf-8") as f:
+                records = json.load(f)
+        except Exception:
+            records = []
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    # 移除今天的舊資料（若重跑）
+    records = [r for r in records if r.get("date") != today]
+    records.append({
+        "date": today,
+        "topics": [{"title": t.get("title",""), "score": t.get("score",0),
+                    "tool": t.get("tool",""), "keyword": t.get("keyword","")}
+                   for t in topics[:5]]
+    })
+    # 只保留最近 30 天
+    records = records[-30:]
+    with open(TOPIC_RANKING_FILE, "w", encoding="utf-8") as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
+    print(f"  📊 今日 Top5 已存入排名歷史")
+
+def load_past_rankings(days: int = 3) -> list:
+    """讀取過去 N 天的排名歷史（不含今天）"""
+    if not Path(TOPIC_RANKING_FILE).exists():
+        return []
+    try:
+        with open(TOPIC_RANKING_FILE, encoding="utf-8") as f:
+            records = json.load(f)
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        cutoff = (datetime.datetime.now() - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+        return [r for r in records if cutoff <= r.get("date","") < today]
+    except Exception:
+        return []
+
+def _title_similar(a: str, b: str, threshold: float = 0.55) -> bool:
+    """判斷兩個標題是否相似（字元集重疊率）"""
+    ca, cb = set(a), set(b)
+    if not ca:
+        return False
+    return len(ca & cb) / len(ca) > threshold
+
+def pick_best_topic(today_top5: list, past_rankings: list, used: list) -> dict:
+    """
+    三天排名交叉分析選出最佳選題：
+    - 基礎分：今日 Gemini 評分（1-10）
+    - 連續出現加分：過去 3 天每天出現 +2 分
+    - 排名上升加分：今日排名比昨天高 +1 分
+    - 已發布扣除：完全排除
+    回傳最終最佳選題 dict
+    """
+    print("\n🏆 三天排名交叉分析...")
+
+    # 建立今日排名 map（排名從 0 開始）
+    today_rank = {t["title"]: i for i, t in enumerate(today_top5)}
+
+    scored = []
+    for rank_i, topic in enumerate(today_top5):
+        title = topic.get("title", "")
+
+        # 排除已發布
+        if any(_title_similar(title, u) for u in used):
+            print(f"  ⛔ 已發布，跳過：{title}")
+            continue
+
+        base   = topic.get("score", 5)
+        bonus  = 0
+        detail = []
+
+        # 過去 3 天排名分析
+        for day_rec in past_rankings:
+            day_topics = day_rec.get("topics", [])
+            for past_rank, pt in enumerate(day_topics):
+                if _title_similar(title, pt.get("title", "")):
+                    bonus += 2  # 連續出現
+                    detail.append(f"{day_rec['date']} 排名#{past_rank+1}")
+                    if past_rank > rank_i:   # 今天排名比那天更高 → 上升趨勢
+                        bonus += 1
+                        detail.append("↑ 上升趨勢")
+                    break
+
+        final = base + bonus
+        scored.append({**topic, "final_score": final, "rank_detail": detail})
+        trend_str = f"（過去出現：{', '.join(detail)}）" if detail else "（新題）"
+        print(f"  {'★' if rank_i==0 else ' '} [{final}分 = 基礎{base}+加分{bonus}] {title} {trend_str}")
+
+    if not scored:
+        print("  ⚠️ 所有選題已發布，使用今日第一名（含已發布）")
+        return today_top5[0] if today_top5 else {}
+
+    scored.sort(key=lambda x: x["final_score"], reverse=True)
+    best = scored[0]
+    print(f"\n  ✅ 最終選題（{best['final_score']}分）：{best['title']}")
+    return best
 
 # 任務二：爆款選題分析
 # ═══════════════════════════════════════════
-def analyze_viral_topics(manual_topic: str = "", manual_tool: str = "") -> list:
-    print("\n💡 任務二：爆款選題分析（搜尋市場趨勢）...")
+def analyze_viral_topics(manual_topic: str = "", manual_tool: str = "") -> dict:
+    print("\n💡 任務二：爆款選題分析（市場搜尋 + 三天趨勢交叉）...")
     if manual_topic:
         tool = manual_tool or "Claude"
-        return [{"title": manual_topic, "score": 10, "keyword": manual_topic,
-                 "appeal": "用戶指定", "algorithm": "手動選題", "reason": "手動指定",
-                 "tool": tool}]
+        return {"title": manual_topic, "score": 10, "keyword": manual_topic,
+                "appeal": "用戶指定", "algorithm": "手動選題", "reason": "手動指定",
+                "tool": tool, "final_score": 10}
 
-    used = load_used_topics()
+    used        = load_used_topics()
+    past_ranks  = load_past_rankings(days=3)
+
     used_block = ""
     if used:
-        used_list = "\n".join(f"- {t}" for t in used[-30:])
-        used_block = f"\n\n【已用過的選題，請完全避開，不得重複或相似】\n{used_list}"
+        used_list  = "\n".join(f"- {t}" for t in used[-30:])
+        used_block = f"\n\n【已發布選題，完全避開】\n{used_list}"
 
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     prompt = f"""
-今天是 {today}。你是「Vivi AI研習社」的內容策略師，請用 Google 搜尋，找出當前台灣職場上班族最感興趣的 AI 工具話題。
+今天是 {today}。你是「Vivi AI研習社」的內容策略師，請用 Google 搜尋台灣 AI 工具市場最新趨勢。
 
-研究方向：
-1. 搜尋「台灣 AI 工具 職場 2025」「AI 教學 上班族 短影片」找熱門話題
-2. 搜尋 YouTube 上「AI工具教學」「ChatGPT教學」「Notion AI」等的近期爆款影片標題
-3. 搜尋 PTT、Dcard 上 AI 工具的近期熱門討論
-4. 找出最近有新功能發布的 AI 工具（ChatGPT / Claude / Gemini / Notion AI / Canva AI / Gamma / Perplexity）
+研究步驟：
+1. 搜尋「台灣 AI 工具 職場 {today[:4]}」「AI 教學 上班族 短影片」
+2. 搜尋 YouTube「AI工具教學」「ChatGPT教學」「Notion AI教學」近期爆款標題
+3. 搜尋 PTT Soft_Job 板、Dcard 職場板 AI 工具最近熱門討論
+4. 找最近 7 天有新功能或更新的 AI 工具（ChatGPT / Claude / Gemini / Notion AI / Canva AI / Gamma / Perplexity）
 
-基於以上市場研究，提供 10 個爆款短影片選題，每個必須：
+基於搜尋結果，提供 10 個爆款短影片候選選題，每個必須：
 - 針對台灣非技術背景上班族（PM、業務、行政、主管）
-- 是「某個 AI 工具的具體操作教學」，有 3 個可示意的步驟
-- 60 秒內說清楚
-- 標題有具體數字或成果（「省 X 小時」「X 步驟」「0 元」）
-- 指定主要工具（Claude / Gamma / Notion AI / ChatGPT / Canva AI / Perplexity 等）{used_block}
+- 具體 AI 工具操作教學，有 3 個可截圖的步驟
+- 60 秒說清楚，標題含具體數字或成果
+- 指定工具（Claude / Gamma / Notion AI / ChatGPT / Canva AI / Perplexity 等）{used_block}
 
-輸出 JSON 陣列（10 個，依市場潛力評分 1-10）：
+輸出 JSON 陣列（10 個，依市場潛力評分 1-10，分數可重複）：
 [{{"title":"...","appeal":"...","algorithm":"...","keyword":"...","tool":"...","score":9,"reason":"..."}}]
 """
-    topics = _gemini_json(prompt, use_search=True, array=True)
-    if not topics:
-        topics = [{"title": "3步驟用Claude整理會議記錄，省下2小時", "score": 9,
-                   "keyword": "Claude 教學 會議記錄", "tool": "Claude",
-                   "appeal": "具體省時數字", "algorithm": "搜尋量高", "reason": "fallback"}]
+    raw_topics = _gemini_json(prompt, use_search=True, array=True)
+    if not raw_topics:
+        raw_topics = [{"title": "3步驟用Claude整理會議記錄，省下2小時", "score": 9,
+                       "keyword": "Claude 教學 會議記錄", "tool": "Claude",
+                       "appeal": "具體省時數字", "algorithm": "搜尋量高", "reason": "fallback"}]
 
-    # 排除與歷史選題字元重疊度過高的
-    def _is_similar(title: str, used_list: list) -> bool:
-        chars = set(title)
-        for u in used_list:
-            overlap = len(chars & set(u)) / max(len(chars), 1)
-            if overlap > 0.6:
-                return True
-        return False
+    raw_topics.sort(key=lambda x: x.get("score", 0), reverse=True)
 
-    fresh = [t for t in topics if not _is_similar(t.get("title", ""), used)]
-    if not fresh:
-        fresh = topics  # 若全部相似則直接用原清單
+    # 取今日 Top5（不排除已發布，排除留給 pick_best_topic 做）
+    today_top5 = raw_topics[:5]
+    print(f"  📋 今日 Top5 候選：")
+    for i, t in enumerate(today_top5, 1):
+        print(f"    {i}. [{t.get('score',0)}分] {t['title']} ({t.get('tool','')})")
 
-    fresh.sort(key=lambda x: x.get("score", 0), reverse=True)
-    return fresh
+    # 儲存今日 Top5 進排名歷史
+    save_daily_top5(today_top5)
 
+    # 三天交叉分析選出最佳
+    best = pick_best_topic(today_top5, past_ranks, used)
+    return best
 # ═══════════════════════════════════════════
 # 任務三：YouTube 參考影片搜尋
 # ═══════════════════════════════════════════
@@ -511,13 +606,12 @@ def main():
 
     # ── 共同流程（PREVIEW & FULL 都執行）──
     benchmark = research_benchmark_accounts()
-    topics    = analyze_viral_topics(manual_topic, manual_tool)
-    best = topics[0] if topics else {
-        "title":"3步驟用Claude整理會議記錄","keyword":"Claude 教學","score":9,"tool":"Claude"}
+    best = analyze_viral_topics(manual_topic, manual_tool)
+    if not best:
+        best = {"title":"3步驟用Claude整理會議記錄","keyword":"Claude 教學","score":9,"tool":"Claude","final_score":9}
 
-    print(f"\n  ⭐ 最高分選題（{best.get('score',0)}分）：{best['title']}")
-    for i, t in enumerate(topics, 1):
-        print(f"  {i}. [{t.get('score',0)}分] {t['title']}")
+    print(f"\n  ✅ 今日最終選題（{best.get('final_score', best.get('score',0))}分）：{best['title']}")
+    print(f"     工具：{best.get('tool','')} ｜ 關鍵字：{best.get('keyword','')} ｜ 亮點：{best.get('appeal','')}") 
 
     keyword = best.get("keyword") or best["title"]
     videos  = search_youtube_videos(keyword, max_results=5)
