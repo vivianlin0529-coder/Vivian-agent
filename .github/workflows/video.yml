@@ -2,7 +2,7 @@ name: 🎬 Vivi 每日影片自動生成
 
 on:
   schedule:
-    - cron: '0 14 * * *'   # 每天 UTC 14:00 = 台灣 22:00
+    - cron: '0 23 * * *'   # 每天 UTC 23:00 = 台灣 07:00
   workflow_dispatch:         # 手動觸發（測試用）
     inputs:
       topic:
