@@ -126,19 +126,25 @@ def _audio_dur(path):
 # ══════════════════════════════════════════════════════
 
 # ── Pexels 辦公室情境照片庫（直連，均為真實辦公室/職場場景）─────────
-PEXELS_PAIN = [
-    # ── 痛點情境圖庫（辦公室壓力/加班/焦慮）
+# ══════════════════════════════════════════════════════
+# 照片庫 — 依主題分類（辦公室情境，無 X 標示）
+# ══════════════════════════════════════════════════════
+
+# 通用痛點（壓力/忙碌辦公室）
+PHOTOS_PAIN_GENERAL = [
     "https://images.pexels.com/photos/5699678/pexels-photo-5699678.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/4101143/pexels-photo-4101143.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/3760810/pexels-photo-3760810.jpeg?auto=compress&cs=tinysrgb&w=1920",
-    "https://images.pexels.com/photos/7688336/pexels-photo-7688336.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/3799832/pexels-photo-3799832.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/4491461/pexels-photo-4491461.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/1496193/pexels-photo-1496193.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/7688336/pexels-photo-7688336.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3184339/pexels-photo-3184339.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/4386373/pexels-photo-4386373.jpeg?auto=compress&cs=tinysrgb&w=1920",
 ]
-PEXELS_WIN = [
-    # ── 成功/效率/成果圖庫
+# 通用成果（成功/協作/效率）
+PHOTOS_WIN_GENERAL = [
     "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/5255215/pexels-photo-5255215.jpeg?auto=compress&cs=tinysrgb&w=1920",
@@ -147,220 +153,447 @@ PEXELS_WIN = [
     "https://images.pexels.com/photos/1181354/pexels-photo-1181354.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/3184433/pexels-photo-3184433.jpeg?auto=compress&cs=tinysrgb&w=1920",
     "https://images.pexels.com/photos/7688160/pexels-photo-7688160.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3184287/pexels-photo-3184287.jpeg?auto=compress&cs=tinysrgb&w=1920",
+]
+# 主題特化：簡報/投影片
+PHOTOS_SLIDES = [
+    "https://images.pexels.com/photos/3184325/pexels-photo-3184325.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3182773/pexels-photo-3182773.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/1181396/pexels-photo-1181396.jpeg?auto=compress&cs=tinysrgb&w=1920",
+]
+# 主題特化：Email/信件
+PHOTOS_EMAIL = [
+    "https://images.pexels.com/photos/4050290/pexels-photo-4050290.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/6238120/pexels-photo-6238120.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/4050287/pexels-photo-4050287.jpeg?auto=compress&cs=tinysrgb&w=1920",
+]
+# 主題特化：會議/討論
+PHOTOS_MEETING = [
+    "https://images.pexels.com/photos/3184317/pexels-photo-3184317.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/3182743/pexels-photo-3182743.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/1181622/pexels-photo-1181622.jpeg?auto=compress&cs=tinysrgb&w=1920",
+]
+# 主題特化：數據/報告
+PHOTOS_DATA = [
+    "https://images.pexels.com/photos/590022/pexels-photo-590022.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/669615/pexels-photo-669615.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/6801648/pexels-photo-6801648.jpeg?auto=compress&cs=tinysrgb&w=1920",
 ]
 
-# ── Hook 主題設定（6種輪替，每篇視覺完全不同）──
-HOOK_THEMES = [
-    # 主題 0：紅色警示 — 標準版（原版改良）
-    dict(
-        pain_bg=(255, 240, 238), pain_left=(255, 225, 220),
-        pain_accent=(195, 35, 18), pain_txt=(88, 28, 12),
-        pain_label="⚠  工作中的你", pain_bullet="✗",
-        pain_overlay=(130, 15, 5), pain_overlay_alpha=70,
-        win_bg=(240, 252, 244), win_left=(220, 248, 226),
-        win_accent=(18, 132, 38), win_txt=(12, 64, 18),
-        win_label="✓  用 AI 之後", win_bullet="✓",
-        win_overlay=(8, 60, 18), win_overlay_alpha=55,
-        win_badge="AI 幫你 30 秒搞定",
-    ),
-    # 主題 1：深藍商務 — 數字衝擊
-    dict(
-        pain_bg=(235, 240, 252), pain_left=(215, 228, 250),
-        pain_accent=(30, 60, 180), pain_txt=(20, 40, 120),
-        pain_label="📊  你每天浪費的時間",  pain_bullet="▶",
-        pain_overlay=(10, 30, 100), pain_overlay_alpha=75,
-        win_bg=(235, 250, 255), win_left=(210, 242, 255),
-        win_accent=(0, 120, 200), win_txt=(0, 70, 140),
-        win_label="🚀  AI 接手後", win_bullet="▶",
-        win_overlay=(0, 60, 120), win_overlay_alpha=60,
-        win_badge="效率提升 10x",
-    ),
-    # 主題 2：橘色緊迫 — 截止日期感
-    dict(
-        pain_bg=(255, 245, 235), pain_left=(255, 230, 210),
-        pain_accent=(200, 80, 0), pain_txt=(120, 50, 0),
-        pain_label="🔥  Deadline 壓力",  pain_bullet="！",
-        pain_overlay=(140, 50, 0), pain_overlay_alpha=65,
-        win_bg=(255, 252, 235), win_left=(255, 248, 210),
-        win_accent=(180, 130, 0), win_txt=(100, 75, 0),
-        win_label="⚡  AI 加速完成", win_bullet="★",
-        win_overlay=(110, 80, 0), win_overlay_alpha=55,
-        win_badge="準時交件 不再趕",
-    ),
-    # 主題 3：暗紫科技感 — 現代感
-    dict(
-        pain_bg=(245, 238, 255), pain_left=(232, 218, 255),
-        pain_accent=(120, 30, 190), pain_txt=(70, 15, 120),
-        pain_label="😩  你卡關的地方", pain_bullet="▸",
-        pain_overlay=(80, 10, 140), pain_overlay_alpha=70,
-        win_bg=(238, 245, 255), win_left=(218, 232, 255),
-        win_accent=(30, 90, 200), win_txt=(15, 55, 130),
-        win_label="✨  AI 一鍵解決", win_bullet="◆",
-        win_overlay=(10, 50, 150), win_overlay_alpha=60,
-        win_badge="從此不再卡關",
-    ),
-    # 主題 4：黑金質感 — 高端職場
-    dict(
-        pain_bg=(245, 242, 235), pain_left=(230, 224, 208),
-        pain_accent=(120, 85, 20), pain_txt=(70, 50, 10),
-        pain_label="📌  職場痛點", pain_bullet="•",
-        pain_overlay=(60, 40, 5), pain_overlay_alpha=80,
-        win_bg=(245, 248, 240), win_left=(228, 238, 218),
-        win_accent=(50, 120, 30), win_txt=(25, 70, 15),
-        win_label="💼  AI 職場升級", win_bullet="◉",
-        win_overlay=(20, 70, 10), win_overlay_alpha=65,
-        win_badge="職場競爭力 UP",
-    ),
-    # 主題 5：青藍清新 — 輕鬆效率
-    dict(
-        pain_bg=(235, 250, 255), pain_left=(210, 240, 255),
-        pain_accent=(0, 140, 180), pain_txt=(0, 80, 110),
-        pain_label="😓  每天都在重複",  pain_bullet="→",
-        pain_overlay=(0, 80, 120), pain_overlay_alpha=65,
-        win_bg=(235, 255, 252), win_left=(210, 255, 248),
-        win_accent=(0, 160, 130), win_txt=(0, 90, 75),
-        win_label="🎯  AI 自動化搞定", win_bullet="✦",
-        win_overlay=(0, 100, 80), win_overlay_alpha=55,
-        win_badge="省時又省力",
-    ),
-]
+# 已用照片記錄（跨天避免重複）
+USED_PHOTOS_FILE = "used_photos.json"
 
-def _fetch_photo(category: str, w: int, h: int, cache_path: str, seed: int = 0) -> Image.Image | None:
-    """從 Pexels 下載情境照片，每次根據 seed 選不同圖（不做長期 cache）"""
+def _load_used_photos() -> set:
+    from pathlib import Path as _P; import json as _j
+    if not _P(USED_PHOTOS_FILE).exists(): return set()
+    try:
+        with open(USED_PHOTOS_FILE, encoding="utf-8") as f:
+            rec = _j.load(f)
+        import datetime as _d
+        cutoff = (_d.datetime.now() - _d.timedelta(days=30)).isoformat()
+        return {r["url"] for r in rec if r.get("date","") >= cutoff}
+    except: return set()
+
+def _save_used_photos(urls: list):
+    import json as _j, datetime as _d
+    records = []
+    from pathlib import Path as _P
+    if _P(USED_PHOTOS_FILE).exists():
+        try:
+            with open(USED_PHOTOS_FILE, encoding="utf-8") as f:
+                records = _j.load(f)
+        except: pass
+    now = _d.datetime.now().isoformat()
+    for u in urls:
+        records.append({"url": u, "date": now})
+    records = records[-200:]
+    with open(USED_PHOTOS_FILE, "w", encoding="utf-8") as f:
+        _j.dump(records, f, ensure_ascii=False, indent=2)
+
+def _pick_photo_url(pool: list, seed: int, used: set) -> str:
+    """從 pool 中依 seed 選出未用過的圖，沒有時允許重用最舊的"""
+    fresh = [u for u in pool if u not in used]
+    if not fresh:
+        fresh = pool  # 全用完則重頭開始
+    return fresh[seed % len(fresh)]
+
+def _topic_photo_pools(title: str):
+    """依選題關鍵字選擇對應照片池"""
+    t = title.lower()
+    if any(k in t for k in ["簡報","投影","gamma","canva","slide","ppt"]):
+        return PHOTOS_SLIDES + PHOTOS_WIN_GENERAL, PHOTOS_SLIDES + PHOTOS_WIN_GENERAL
+    if any(k in t for k in ["信件","email","mail","gmail","收件"]):
+        return PHOTOS_EMAIL + PHOTOS_PAIN_GENERAL, PHOTOS_EMAIL + PHOTOS_WIN_GENERAL
+    if any(k in t for k in ["會議","討論","meeting","記錄","逐字"]):
+        return PHOTOS_MEETING + PHOTOS_PAIN_GENERAL, PHOTOS_MEETING + PHOTOS_WIN_GENERAL
+    if any(k in t for k in ["報告","數據","data","分析","圖表","週報"]):
+        return PHOTOS_DATA + PHOTOS_PAIN_GENERAL, PHOTOS_DATA + PHOTOS_WIN_GENERAL
+    return PHOTOS_PAIN_GENERAL, PHOTOS_WIN_GENERAL
+
+
+def _fetch_photo_url(url: str, w: int, h: int) -> "Image.Image | None":
+    """下載單張照片"""
     import urllib3; urllib3.disable_warnings()
-
-    # 每次重新下載（不 cache）確保每篇不同
-    urls = PEXELS_PAIN if "pain" in category else PEXELS_WIN
-    url  = urls[seed % len(urls)]
-
-    headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; Vivi-Agent/1.0)",
-        "Accept": "image/jpeg,image/*",
-    }
+    headers = {"User-Agent": "Mozilla/5.0", "Accept": "image/jpeg,image/*"}
     try:
         resp = requests.get(url, timeout=20, verify=False,
                             allow_redirects=True, headers=headers)
         if resp.status_code == 200 and len(resp.content) > 20000:
             img = Image.open(io.BytesIO(resp.content)).convert("RGB")
-            img = img.resize((w, h), Image.LANCZOS)
-            print(f"  📷 照片下載成功：{category} seed={seed}")
-            return img
-        else:
-            print(f"  ⚠️ 照片 HTTP {resp.status_code}")
+            return img.resize((w, h), Image.LANCZOS)
+        print(f"  ⚠️ 照片 HTTP {resp.status_code}")
     except Exception as ex:
         print(f"  ⚠️ 照片下載失敗：{ex}")
     return None
 
 
-def _photo_with_overlay(img: Image.Image, tw: int, th: int,
-                         overlay_col: tuple, alpha: int = 140) -> Image.Image:
-    """在照片上加半透明遮罩，讓文字更易讀"""
-    img = img.resize((tw, th), Image.LANCZOS)
-    overlay = Image.new("RGBA", (tw, th), overlay_col + (alpha,))
-    base = img.convert("RGBA")
-    merged = Image.alpha_composite(base, overlay)
-    return merged.convert("RGB")
+def _overlay(img: Image.Image, col: tuple, alpha: int) -> Image.Image:
+    ov = Image.new("RGBA", img.size, col + (alpha,))
+    return Image.alpha_composite(img.convert("RGBA"), ov).convert("RGB")
 
 
 # ══════════════════════════════════════════════════════
-# Hook clip（6 主題輪替版）
+# 10 種 Hook 版型繪製器
+# ══════════════════════════════════════════════════════
+
+def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
+    """依 layout_id 繪製 pain 和 win 兩張靜態圖，回傳 (pain_arr, win_arr)"""
+
+    # ── 通用輔助 ──────────────────────────────
+    def _make(bg): 
+        img = Image.new("RGB", (W, H), bg)
+        d = ImageDraw.Draw(img)
+        _top(d, title); _bot(d)
+        return img, d
+
+    def _pts(d, pts, x, y, bullet, accent, txt_col, size=30, spacing=56, maxw=600):
+        for p in pts[:4]:
+            _safe_text(d, (x, y), f"{bullet}  {p}", font=_f(size), fill=txt_col, max_width=maxw)
+            y += spacing
+        return y
+
+    def _badge(d, text, cx, cy, bg, fg, pad=20):
+        tw2 = d.textlength(text, font=_f(36, True))
+        x0 = cx - tw2//2 - pad; y0 = cy - 28
+        d.rectangle([(x0, y0), (x0+tw2+pad*2, y0+58)], fill=bg)
+        d.text((x0+pad, y0+10), text, font=_f(36, True), fill=fg)
+
+    # ── Layout 0：左文右照（改良版，無 X，accent border）──────────
+    if layout_id == 0:
+        RED=(195,35,18); GRN=(18,132,38)
+        pi, pd_ = _make((255,242,240))
+        pd_.rectangle([(0,AY),(LW+18,AB)], fill=(255,224,220))
+        pd_.text((36,AY+22), "⚠  工作中的你", font=_f(40,True), fill=RED)
+        pd_.rectangle([(36,AY+72),(LW-18,AY+76)], fill=RED)
+        _pts(pd_, pain_pts, 36, AY+96, "—", RED, (100,30,20))
+        if pain_img:
+            pi.paste(_overlay(pain_img,( 120,15,5),55), (RX,AY))
+        pd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=RED, width=5)
+        wi, wd_ = _make((240,252,244))
+        wd_.rectangle([(0,AY),(LW+18,AB)], fill=(218,248,224))
+        wd_.text((36,AY+22), "✓  用 AI 之後", font=_f(40,True), fill=GRN)
+        wd_.rectangle([(36,AY+72),(LW-18,AY+76)], fill=GRN)
+        _pts(wd_, win_pts, 36, AY+96, "→", GRN, (12,64,18))
+        if win_img:
+            wi.paste(_overlay(win_img,(8,55,18),50), (RX,AY))
+            _badge(wd_, "AI 30秒搞定", RX+RW//2, AY+50, GRN, (255,255,255))
+        wd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=GRN, width=5)
+        return np.array(pi), np.array(wi)
+
+    # ── Layout 1：全幅照片底圖 + 半透明文字卡 ──────────────────
+    if layout_id == 1:
+        BLUE=(20,60,180); LBLUE=(0,120,210)
+        pi = Image.new("RGB", (W,H), (230,235,252))
+        if pain_img:
+            pi.paste(_overlay(pain_img,(10,20,80),120), (0,0))
+        pd_ = ImageDraw.Draw(pi)
+        _top(pd_, title); _bot(pd_)
+        # 左側半透明卡
+        card = Image.new("RGBA",(680,AH-20),(255,255,255,200))
+        pi = Image.alpha_composite(pi.convert("RGBA"), Image.new("RGBA",(W,H),(0,0,0,0)))
+        pi.paste(card, (20, AY+10), card)
+        pi = pi.convert("RGB"); pd_ = ImageDraw.Draw(pi)
+        _top(pd_, title); _bot(pd_)
+        pd_.text((48,AY+36), "📊 你每天浪費多少時間？", font=_f(38,True), fill=BLUE)
+        pd_.rectangle([(48,AY+88),(660,AY+92)], fill=BLUE)
+        _pts(pd_, pain_pts, 48, AY+106, "▶", BLUE, (20,40,120), size=29, spacing=54, maxw=580)
+        wi = Image.new("RGB", (W,H), (230,245,255))
+        if win_img:
+            wi.paste(_overlay(win_img,(0,50,110),110), (0,0))
+        wd_ = ImageDraw.Draw(wi)
+        _top(wd_, title); _bot(wd_)
+        card2 = Image.new("RGBA",(680,AH-20),(255,255,255,200))
+        wi = Image.alpha_composite(wi.convert("RGBA"), Image.new("RGBA",(W,H),(0,0,0,0)))
+        wi.paste(card2, (20,AY+10), card2)
+        wi = wi.convert("RGB"); wd_ = ImageDraw.Draw(wi)
+        _top(wd_, title); _bot(wd_)
+        wd_.text((48,AY+36), "🚀 AI 接手之後", font=_f(38,True), fill=LBLUE)
+        wd_.rectangle([(48,AY+88),(660,AY+92)], fill=LBLUE)
+        _pts(wd_, win_pts, 48, AY+106, "▶", LBLUE, (0,70,140), size=29, spacing=54, maxw=580)
+        _badge(wd_, "效率直接翻倍", 340, AY+AH-70, LBLUE, (255,255,255))
+        return np.array(pi), np.array(wi)
+
+    # ── Layout 2：右文左照（反轉）+ 橙色主題 ──────────────────
+    if layout_id == 2:
+        ORG=(200,80,0); YLW=(180,130,0)
+        LPH = W - RX - 14   # 左側寬度（照片）
+        RPX = LPH + 20       # 右側文字起點
+        RPW = W - RPX - 20
+        pi, pd_ = _make((255,246,235))
+        if pain_img:
+            ph = pain_img.resize((LPH, AH), Image.LANCZOS)
+            pi.paste(_overlay(ph,(140,50,0),60), (0,AY))
+        pd_.rectangle([(RPX,AY),(W-8,AB)], fill=(255,232,210))
+        pd_.text((RPX+20,AY+22), "🔥 Deadline", font=_f(44,True), fill=ORG)
+        pd_.text((RPX+20,AY+72), "壓力山大", font=_f(36,True), fill=ORG)
+        pd_.rectangle([(RPX+20,AY+118),(W-28,AY+122)], fill=ORG)
+        _pts(pd_, pain_pts, RPX+20, AY+136, "!", ORG, (120,50,0), size=27, spacing=52, maxw=RPW-30)
+        pd_.rectangle([(LPH-2,AY-2),(LPH+2,AB+2)], fill=ORG, )
+        wi, wd_ = _make((255,252,235))
+        if win_img:
+            wh = win_img.resize((LPH, AH), Image.LANCZOS)
+            wi.paste(_overlay(wh,(110,80,0),50), (0,AY))
+        wd_.rectangle([(RPX,AY),(W-8,AB)], fill=(255,250,215))
+        wd_.text((RPX+20,AY+22), "⚡ AI 加速", font=_f(44,True), fill=YLW)
+        wd_.text((RPX+20,AY+72), "準時交件", font=_f(36,True), fill=YLW)
+        wd_.rectangle([(RPX+20,AY+118),(W-28,AY+122)], fill=YLW)
+        _pts(wd_, win_pts, RPX+20, AY+136, "★", YLW, (100,75,0), size=27, spacing=52, maxw=RPW-30)
+        _badge(wd_, "不再趕 Deadline", RPX+RPW//2, AY+AH-70, YLW, (255,255,255))
+        wd_.rectangle([(LPH-2,AY-2),(LPH+2,AB+2)], fill=YLW)
+        return np.array(pi), np.array(wi)
+
+    # ── Layout 3：上下分割 — 照片上半，文字下半 ──────────────────
+    if layout_id == 3:
+        PUR=(120,30,190); TEAL=(0,160,130)
+        MID = AY + (AB-AY)//2
+        pi, pd_ = _make((245,238,255))
+        if pain_img:
+            ph = pain_img.resize((W, MID-AY), Image.LANCZOS)
+            pi.paste(_overlay(ph,(80,10,140),80), (0,AY))
+        pd_.rectangle([(0,MID),(W,AB)], fill=(235,220,255))
+        pd_.text((40,MID+16), "😩  你卡關的地方", font=_f(38,True), fill=PUR)
+        pd_.rectangle([(40,MID+62),(W-40,MID+66)], fill=PUR)
+        # 橫排 2x2 痛點
+        pts2 = pain_pts[:4]
+        col_w = (W-80)//2
+        for i, p in enumerate(pts2):
+            cx2 = 40 + (i%2)*col_w; cy2 = MID+80 + (i//2)*58
+            _safe_text(pd_, (cx2,cy2), f"— {p}", font=_f(28), fill=(70,15,120), max_width=col_w-20)
+        wi, wd_ = _make((235,252,248))
+        if win_img:
+            wh = win_img.resize((W, MID-AY), Image.LANCZOS)
+            wi.paste(_overlay(wh,(0,100,80),70), (0,AY))
+            _badge(wd_, "AI 一鍵解決", W//2, AY+(MID-AY)//2, TEAL, (255,255,255))
+        wd_.rectangle([(0,MID),(W,AB)], fill=(215,248,240))
+        wd_.text((40,MID+16), "✨  AI 之後的你", font=_f(38,True), fill=TEAL)
+        wd_.rectangle([(40,MID+62),(W-40,MID+66)], fill=TEAL)
+        col_w2 = (W-80)//2
+        for i, p in enumerate(win_pts[:4]):
+            cx2 = 40 + (i%2)*col_w2; cy2 = MID+80 + (i//2)*58
+            _safe_text(wd_, (cx2,cy2), f"→ {p}", font=_f(28), fill=(0,90,75), max_width=col_w2-20)
+        return np.array(pi), np.array(wi)
+
+    # ── Layout 4：大數字衝擊 — 中央數字 + 兩側文字 ──────────────
+    if layout_id == 4:
+        NAVY=(15,35,120); GOLD=(190,140,20)
+        pi, pd_ = _make((235,240,255))
+        if pain_img:
+            pi.paste(_overlay(pain_img,(10,20,90),140), (0,AY))
+        pd_ = ImageDraw.Draw(pi); _top(pd_, title); _bot(pd_)
+        # 中央大數字
+        pd_.text((W//2-80, AY+40), "3h", font=_f(200,True), fill=(255,80,80,200))
+        pd_.text((W//2-220, AY+240), "你每天花在這件事上的時間", font=_f(32,True), fill=(255,255,255))
+        # 左右痛點（覆蓋在照片上）
+        for i,p in enumerate(pain_pts[:2]):
+            _safe_text(pd_, (40, AY+120+i*70), f"—  {p}", font=_f(30,True), fill=(255,220,200), max_width=400)
+        for i,p in enumerate(pain_pts[2:4]):
+            _safe_text(pd_, (W-460, AY+120+i*70), f"—  {p}", font=_f(30,True), fill=(255,220,200), max_width=400)
+        wi, wd_ = _make((230,245,255))
+        if win_img:
+            wi.paste(_overlay(win_img,(0,40,100),130), (0,AY))
+        wd_ = ImageDraw.Draw(wi); _top(wd_, title); _bot(wd_)
+        wd_.text((W//2-130, AY+40), "30s", font=_f(180,True), fill=(80,255,160,200))
+        wd_.text((W//2-220, AY+230), "AI 完成同樣工作只需要", font=_f(32,True), fill=(255,255,255))
+        for i,p in enumerate(win_pts[:2]):
+            _safe_text(wd_, (40, AY+120+i*70), f"→  {p}", font=_f(30,True), fill=(180,255,210), max_width=400)
+        for i,p in enumerate(win_pts[2:4]):
+            _safe_text(wd_, (W-460, AY+120+i*70), f"→  {p}", font=_f(30,True), fill=(180,255,210), max_width=400)
+        return np.array(pi), np.array(wi)
+
+    # ── Layout 5：黑金質感 — 深色底，金色文字 ──────────────────
+    if layout_id == 5:
+        BG_D=(28,22,10); GLD=(206,158,68); LGLD=(245,210,120)
+        pi, pd_ = _make(BG_D)
+        pd_.rectangle([(0,AY),(W,AB)], fill=BG_D)
+        if pain_img:
+            ph = _overlay(pain_img,(28,22,10),170)
+            pi.paste(ph.resize((RW,AH),Image.LANCZOS), (RX,AY))
+        # 左側金色裝飾線
+        pd_.rectangle([(40,AY+30),(44,AB-30)], fill=GLD)
+        pd_.text((60,AY+30), "📌", font=_f(40), fill=GLD)
+        pd_.text((60,AY+80), "職場痛點", font=_f(48,True), fill=GLD)
+        pd_.rectangle([(60,AY+138),(LW-20,AY+142)], fill=GLD)
+        _pts(pd_, pain_pts, 60, AY+158, "·", GLD, LGLD, size=30, spacing=56, maxw=LW-80)
+        pd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=GLD, width=3)
+        wi, wd_ = _make(BG_D)
+        wd_.rectangle([(0,AY),(W,AB)], fill=BG_D)
+        if win_img:
+            wh = _overlay(win_img,(28,22,10),140)
+            wi.paste(wh.resize((RW,AH),Image.LANCZOS), (RX,AY))
+        wd_.rectangle([(40,AY+30),(44,AB-30)], fill=GLD)
+        wd_.text((60,AY+30), "💼", font=_f(40), fill=GLD)
+        wd_.text((60,AY+80), "AI 職場升級", font=_f(48,True), fill=GLD)
+        wd_.rectangle([(60,AY+138),(LW-20,AY+142)], fill=GLD)
+        _pts(wd_, win_pts, 60, AY+158, "◆", GLD, LGLD, size=30, spacing=56, maxw=LW-80)
+        _badge(wd_, "職場競爭力 UP", RX+RW//2, AY+50, GLD, BG_D)
+        wd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=GLD, width=3)
+        return np.array(pi), np.array(wi)
+
+    # ── Layout 6：青藍清新 — 圓角卡片，條列式 ──────────────────
+    if layout_id == 6:
+        TEAL=(0,140,180); MINT=(0,160,130)
+        pi, pd_ = _make((230,248,255))
+        if pain_img:
+            pi.paste(_overlay(pain_img,(0,80,120),65).resize((RW,AH),Image.LANCZOS),(RX,AY))
+        pd_.rectangle([(0,AY),(LW+18,AB)], fill=(208,240,255))
+        pd_.text((36,AY+22), "😓 每天都在重複", font=_f(40,True), fill=TEAL)
+        pd_.rectangle([(36,AY+72),(LW-18,AY+76)], fill=TEAL)
+        _pts(pd_, pain_pts, 36, AY+96, "→", TEAL, (0,80,110), size=30, spacing=58, maxw=LW-50)
+        pd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=TEAL, width=5)
+        wi, wd_ = _make((225,255,250))
+        if win_img:
+            wi.paste(_overlay(win_img,(0,100,80),55).resize((RW,AH),Image.LANCZOS),(RX,AY))
+        wd_.rectangle([(0,AY),(LW+18,AB)], fill=(205,248,238))
+        wd_.text((36,AY+22), "🎯 AI 自動化搞定", font=_f(40,True), fill=MINT)
+        wd_.rectangle([(36,AY+72),(LW-18,AY+76)], fill=MINT)
+        _pts(wd_, win_pts, 36, AY+96, "✦", MINT, (0,90,75), size=30, spacing=58, maxw=LW-50)
+        _badge(wd_, "省時又省力", RX+RW//2, AY+50, MINT, (255,255,255))
+        wd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=MINT, width=5)
+        return np.array(pi), np.array(wi)
+
+    # ── Layout 7：卡片牆 — 4 格痛點卡片 ──────────────────────
+    if layout_id == 7:
+        PNK=(180,30,100); ROSE=(220,60,120)
+        pi, pd_ = _make((255,235,245))
+        if pain_img:
+            pi.paste(_overlay(pain_img,(130,10,60),150).resize((W,H-TOP_H-BOT_H),Image.LANCZOS),(0,AY))
+        pd_ = ImageDraw.Draw(pi); _top(pd_, title); _bot(pd_)
+        pd_.text((W//2-200, AY+10), "📮 這些困擾你每天都有", font=_f(38,True), fill=(255,220,235))
+        # 2x2 卡片
+        CW=420; CH=200; GAP=20
+        ox=(W-CW*2-GAP)//2; oy=AY+70
+        for i, p in enumerate(pain_pts[:4]):
+            cx2=ox+(i%2)*(CW+GAP); cy2=oy+(i//2)*(CH+GAP)
+            pd_.rectangle([(cx2,cy2),(cx2+CW,cy2+CH)], fill=(255,255,255,200))
+            pd_.rectangle([(cx2,cy2),(cx2+CW,cy2+8)], fill=PNK)
+            _safe_text(pd_,(cx2+16,cy2+24), p, font=_f(30), fill=(100,20,60), max_width=CW-30)
+        wi, wd_ = _make((235,255,250))
+        if win_img:
+            wi.paste(_overlay(win_img,(0,80,50),140).resize((W,H-TOP_H-BOT_H),Image.LANCZOS),(0,AY))
+        wd_ = ImageDraw.Draw(wi); _top(wd_, title); _bot(wd_)
+        TEAL2=(0,150,110)
+        wd_.text((W//2-200, AY+10), "AI 幫你一次解決", font=_f(38,True), fill=(200,255,235))
+        for i, p in enumerate(win_pts[:4]):
+            cx2=ox+(i%2)*(CW+GAP); cy2=oy+(i//2)*(CH+GAP)
+            wd_.rectangle([(cx2,cy2),(cx2+CW,cy2+CH)], fill=(255,255,255,210))
+            wd_.rectangle([(cx2,cy2),(cx2+CW,cy2+8)], fill=TEAL2)
+            _safe_text(wd_,(cx2+16,cy2+24), p, font=_f(30), fill=(0,80,55), max_width=CW-30)
+        return np.array(pi), np.array(wi)
+
+    # ── Layout 8：簡約留白 — 大字標題 + 細緻條列 ──────────────
+    if layout_id == 8:
+        IND=(40,40,160); SLATE=(80,80,120)
+        pi, pd_ = _make((248,248,255))
+        pd_.rectangle([(0,AY),(W,AY+12)], fill=IND)
+        pd_.text((60,AY+30), "每天的", font=_f(52), fill=SLATE)
+        pd_.text((60,AY+96), "時間黑洞", font=_f(80,True), fill=IND)
+        pd_.rectangle([(60,AY+190),(500,AY+196)], fill=IND)
+        _pts(pd_, pain_pts, 60, AY+216, "○", IND, SLATE, size=32, spacing=60, maxw=700)
+        if pain_img:
+            pi.paste(_overlay(pain_img,(40,40,140),70).resize((580,AH),Image.LANCZOS),(W-600,AY))
+        wi, wd_ = _make((245,255,248))
+        GRN2=(30,140,60); LGND=(80,160,100)
+        wd_.rectangle([(0,AY),(W,AY+12)], fill=GRN2)
+        wd_.text((60,AY+30), "AI 幫你", font=_f(52), fill=LGND)
+        wd_.text((60,AY+96), "找回時間", font=_f(80,True), fill=GRN2)
+        wd_.rectangle([(60,AY+190),(500,AY+196)], fill=GRN2)
+        _pts(wd_, win_pts, 60, AY+216, "●", GRN2, LGND, size=32, spacing=60, maxw=700)
+        if win_img:
+            wi.paste(_overlay(win_img,(20,90,40),60).resize((580,AH),Image.LANCZOS),(W-600,AY))
+        return np.array(pi), np.array(wi)
+
+    # ── Layout 9：電影感橫幅 — 黑底白字+彩色accent ──────────────
+    if layout_id == 9:
+        BK=(18,18,18); WT=(245,245,245)
+        # 隨機 accent（依 title hash）
+        import hashlib as _hl
+        hx=int(_hl.md5(title.encode()).hexdigest()[:4],16)
+        accents=[(220,60,60),(60,140,220),(200,120,20),(140,60,200),(20,160,130)]
+        ACC=accents[hx%len(accents)]
+        pi, pd_ = _make(BK)
+        pd_.rectangle([(0,AY),(W,AB)], fill=BK)
+        if pain_img:
+            pi.paste(_overlay(pain_img,BK,180).resize((W,AH),Image.LANCZOS),(0,AY))
+        pd_ = ImageDraw.Draw(pi); _top(pd_, title); _bot(pd_)
+        pd_.rectangle([(60,AY+30),(8,AY+30+AH-60)], fill=ACC)
+        pd_.rectangle([(60,AY+36),(440,AY+40)], fill=ACC)
+        pd_.text((80,AY+50), "痛點", font=_f(64,True), fill=ACC)
+        _pts(pd_, pain_pts, 80, AY+128, "▸", ACC, WT, size=31, spacing=58, maxw=820)
+        wi, wd_ = _make(BK)
+        wd_.rectangle([(0,AY),(W,AB)], fill=BK)
+        if win_img:
+            wi.paste(_overlay(win_img,BK,150).resize((W,AH),Image.LANCZOS),(0,AY))
+        wd_ = ImageDraw.Draw(wi); _top(wd_, title); _bot(wd_)
+        wd_.rectangle([(60,AY+30),(8,AY+30+AH-60)], fill=ACC)
+        wd_.rectangle([(60,AY+36),(440,AY+40)], fill=ACC)
+        wd_.text((80,AY+50), "AI 解法", font=_f(64,True), fill=ACC)
+        _pts(wd_, win_pts, 80, AY+128, "▸", ACC, WT, size=31, spacing=58, maxw=820)
+        _badge(wd_, "立即試試看", W-300, AY+AH-70, ACC, BK)
+        return np.array(pi), np.array(wi)
+
+    # Fallback → Layout 0
+    return _draw_layout(0, pain_img, win_img, pain_pts, win_pts, title)
+
+
+# ══════════════════════════════════════════════════════
+# Hook clip（10 版型 + 主題照片 + 無 X 標示）
 # ══════════════════════════════════════════════════════
 def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
-    pd = _audio_dur(pain_audio); wd = _audio_dur(win_audio)
+    pd_ = _audio_dur(pain_audio); wd_ = _audio_dur(win_audio)
 
-    # ── 根據 title hash + 日期選主題與照片 seed（確保每篇不同）──
     import datetime as _dt, hashlib as _hl
     day_ord   = _dt.date.today().toordinal()
     title_h   = int(_hl.md5(title.encode()).hexdigest(), 16)
     combined  = day_ord ^ title_h
 
-    theme_idx  = combined % len(HOOK_THEMES)
-    pain_seed  = combined % len(PEXELS_PAIN)
-    win_seed   = (combined + 4) % len(PEXELS_WIN)   # 偏移避免巧合同一張
-    T = HOOK_THEMES[theme_idx]
+    # 選 layout（10 種）
+    layout_id  = combined % 10
 
-    print(f"  🎨 Hook 主題 #{theme_idx}  痛點圖 seed={pain_seed}  成果圖 seed={win_seed}")
+    # 選主題照片池
+    pain_pool, win_pool = _topic_photo_pools(title)
+    used_photos = _load_used_photos()
 
-    pain_photo = _fetch_photo("pain", RW, AH, f"tmp_pain_{pain_seed}.jpg", seed=pain_seed)
-    win_photo  = _fetch_photo("win",  RW, AH, f"tmp_win_{win_seed}.jpg",  seed=win_seed)
+    pain_url = _pick_photo_url(pain_pool, combined,   used_photos)
+    win_url  = _pick_photo_url(win_pool,  combined+7, used_photos)
 
-    # ══ Pain 幀 ══
-    pi  = Image.new("RGB", (W, H), T["pain_bg"])
-    pd2 = ImageDraw.Draw(pi)
-    _top(pd2, title); _bot(pd2)
+    print(f"  🎨 Hook 版型 #{layout_id}  痛點圖={pain_url[-30:]}  成果圖={win_url[-30:]}")
 
-    pd2.rectangle([(0, AY), (LW+18, AB)], fill=T["pain_left"])
+    pain_img = _fetch_photo_url(pain_url, RW, AH)
+    win_img  = _fetch_photo_url(win_url,  RW, AH)
 
-    # 左上標題區
-    pd2.text((36, AY+22), T["pain_label"], font=_f(40, True), fill=T["pain_accent"])
-    pd2.rectangle([(36, AY+74), (LW-18, AY+78)], fill=T["pain_accent"])
+    # 記錄已用照片
+    _save_used_photos([pain_url, win_url])
 
-    # 痛點列表
-    y = AY + 98
-    for pt in pain_pts[:4]:
-        _safe_text(pd2, (36, y), f"{T['pain_bullet']}  {pt}",
-                   font=_f(30), fill=T["pain_txt"], max_width=LW-50)
-        y += 58
+    pain_arr, win_arr = _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title)
 
-    # 右側照片
-    if pain_photo:
-        ph = _photo_with_overlay(pain_photo, RW, AH,
-                                  T["pain_overlay"], T["pain_overlay_alpha"])
-        pi.paste(ph, (RX, AY))
-        # 大 emoji / 符號疊加
-        pd2.text((RX + RW//2 - 90, AY + AH//2 - 110),
-                 "✗", font=_f(180, True), fill=(220, 30, 20))
-    else:
-        pd2.rectangle([(RX, AY), (W-12, AB)], fill=T["pain_left"])
-        pd2.text((RX+40, AY+40), "收件匣：47 封未讀",
-                 font=_f(36, True), fill=T["pain_accent"])
-
-    pd2.rectangle([(RX-2, AY-2), (W-12, AB+2)],
-                  outline=T["pain_accent"], width=5)
-    pain_arr = np.array(pi)
-
-    # ══ Win 幀 ══
-    wi  = Image.new("RGB", (W, H), T["win_bg"])
-    wd2 = ImageDraw.Draw(wi)
-    _top(wd2, title); _bot(wd2)
-
-    wd2.rectangle([(0, AY), (LW+18, AB)], fill=T["win_left"])
-
-    wd2.text((36, AY+22), T["win_label"], font=_f(40, True), fill=T["win_accent"])
-    wd2.rectangle([(36, AY+74), (LW-18, AY+78)], fill=T["win_accent"])
-
-    y = AY + 98
-    for wt in win_pts[:4]:
-        _safe_text(wd2, (36, y), f"{T['win_bullet']}  {wt}",
-                   font=_f(30), fill=T["win_txt"], max_width=LW-50)
-        y += 58
-
-    if win_photo:
-        ph = _photo_with_overlay(win_photo, RW, AH,
-                                  T["win_overlay"], T["win_overlay_alpha"])
-        wi.paste(ph, (RX, AY))
-        # 成果 badge
-        badge = T["win_badge"]
-        bw = wd2.textlength(badge, font=_f(38, True)) + 40
-        bx = RX + (RW - bw) // 2
-        by = AY + 24
-        wd2.rectangle([(bx-4, by-4), (bx+bw+4, by+56)],
-                       fill=T["win_accent"])
-        wd2.text((bx+20, by+8), badge, font=_f(38, True), fill=(255, 255, 255))
-    else:
-        wd2.rectangle([(RX, AY), (W-12, AB)], fill=T["win_left"])
-        wd2.text((RX+40, AY+40), T["win_badge"],
-                 font=_f(40, True), fill=T["win_accent"])
-
-    wd2.rectangle([(RX-2, AY-2), (W-12, AB+2)],
-                  outline=T["win_accent"], width=5)
-    win_arr = np.array(wi)
-
-    pc = VideoClip(lambda t: pain_arr, duration=pd)
-    wc = VideoClip(lambda t: win_arr,  duration=wd)
+    from moviepy.editor import AudioFileClip, VideoClip, concatenate_videoclips
+    pc = VideoClip(lambda t: pain_arr, duration=pd_)
+    wc = VideoClip(lambda t: win_arr,  duration=wd_)
     if pain_audio and Path(pain_audio).exists(): pc = pc.set_audio(AudioFileClip(pain_audio))
     if win_audio  and Path(win_audio).exists():  wc = wc.set_audio(AudioFileClip(win_audio))
     return concatenate_videoclips([pc, wc], method="compose")
+
 
 # ══════════════════════════════════════════════════════
 # Step clip（打字動畫 + 輸出串流，支援簡報預覽）
