@@ -49,6 +49,7 @@ jobs:
           GOOGLE_CLIENT_SECRET:   ${{ secrets.GOOGLE_CLIENT_SECRET }}
           MANUAL_TOPIC:           ${{ github.event.inputs.topic }}
           EXECUTION_MODE:         "FULL"
+          PRESENTER_PHOTO_URL:    ${{ secrets.PRESENTER_PHOTO_URL }}
         run: python daily_video.py
 
       - name: Commit used_topics history
@@ -68,7 +69,10 @@ jobs:
           name: video-${{ github.run_number }}
           path: |
             video_final.mp4
+            daily_preview_video.mp4
             video_meta.json
             content_meta.json
+            thumbnail.jpg
+            preview_thumbnail.jpg
             content_meta.json
           retention-days: 14

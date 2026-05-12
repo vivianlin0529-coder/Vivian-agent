@@ -22,6 +22,170 @@ AY = TOP_H + 4; AB = H - BOT_H - 4; AH = AB - AY
 LW = 680; RX = 726; RW = W - RX - 14
 BRAND = "Vivi AI研習社"
 
+# ══ Ethan 風格視覺系統 ══════════════════════════════════
+ETHAN = dict(
+    # 配色（深海藍為主，橙紅為重點）
+    bg_dark  = (15, 20, 40),      # 深藍底
+    bg_card  = (22, 30, 58),      # 卡片背景
+    accent   = (255, 100, 30),    # 橙紅 accent
+    accent2  = (255, 210, 30),    # 黃色強調
+    text_w   = (245, 245, 250),   # 白色文字
+    text_dim = (160, 170, 195),   # 淡灰文字
+    sep_line = (255, 100, 30),    # 分隔線（橙）
+    badge_bg = (255, 100, 30),    # 數字徽章底色
+    pip_border= (255, 255, 255),  # 頭像框白色
+    pip_w    = 220,               # PiP 寬
+    pip_h    = 220,               # PiP 高
+    pip_x    = 1920-240,          # PiP 右下 X
+    pip_y    = 1080-240,          # PiP 右下 Y
+)
+
+# ── 載入主播頭貼（從 repo assets/ 或 env var URL）──────
+_PRESENTER_IMG: Image.Image | None = None
+
+def _load_presenter_photo() -> Image.Image | None:
+    global _PRESENTER_IMG
+    if _PRESENTER_IMG is not None:
+        return _PRESENTER_IMG
+    import os as _os
+    # 先找本地檔案
+    for loc in ["assets/vivi_avatar.jpg","assets/vivi.jpg","vivi_avatar.jpg"]:
+        if Path(loc).exists():
+            try:
+                _PRESENTER_IMG = Image.open(loc).convert("RGB")
+                print(f"  👤 頭貼載入：{loc}")
+                return _PRESENTER_IMG
+            except: pass
+    # 再試 env var URL
+    url = _os.getenv("PRESENTER_PHOTO_URL","")
+    if url:
+        try:
+            resp = requests.get(url, timeout=15)
+            if resp.status_code==200:
+                _PRESENTER_IMG = Image.open(io.BytesIO(resp.content)).convert("RGB")
+                print("  👤 頭貼下載成功")
+                return _PRESENTER_IMG
+        except: pass
+    print("  ⚠️ 無頭貼，跳過 PiP")
+    return None
+
+def _circular_pip(photo: Image.Image, size: int = 220) -> Image.Image:
+    """裁切為圓形頭貼，加白色邊框"""
+    sq = photo.resize((size, size), Image.LANCZOS)
+    mask = Image.new("L", (size,size), 0)
+    ImageDraw.Draw(mask).ellipse([(0,0),(size,size)], fill=255)
+    result = Image.new("RGBA", (size+8, size+8), (0,0,0,0))
+    # 白色邊框圓
+    bd = Image.new("RGBA",(size+8,size+8),(0,0,0,0))
+    ImageDraw.Draw(bd).ellipse([(0,0),(size+8,size+8)], fill=(255,255,255,255))
+    result = Image.alpha_composite(result, bd)
+    sq_rgba = sq.convert("RGBA")
+    sq_rgba.putalpha(mask)
+    result.paste(sq_rgba, (4,4), sq_rgba)
+    return result
+
+def _add_pip(frame: Image.Image, t: float = 0) -> Image.Image:
+    """在右下角疊加主播圓形頭貼（含名牌）"""
+    photo = _load_presenter_photo()
+    if photo is None:
+        return frame
+    size = ETHAN["pip_w"]
+    pip  = _circular_pip(photo, size)
+    px   = W - size - 28
+    py   = H - size - 28
+    frame = frame.copy()
+    frame.paste(pip, (px, py), pip)
+    # 名牌
+    d = ImageDraw.Draw(frame)
+    badge = "Vivi｜AI研習社"
+    bw = d.textlength(badge, font=_f(22,True)) + 20
+    bx = px + (size+8-bw)//2
+    by = py + size - 4
+    d.rectangle([(bx,by),(bx+bw,by+32)], fill=ETHAN["accent"])
+    d.text((bx+10,by+4), badge, font=_f(22,True), fill=(255,255,255))
+    return frame
+
+def _ethan_thumbnail(title: str, tool: str, pain_pts: list,
+                      output_path: str = "thumbnail.jpg") -> str:
+    """生成 Ethan 風格縮圖（1280x720，左字右人）"""
+    TW, TH = 1280, 720
+    img = Image.new("RGB",(TW,TH), ETHAN["bg_dark"])
+    d   = ImageDraw.Draw(img)
+
+    # 背景漸層（左深右稍淺）
+    for x in range(TW):
+        ratio = x/TW
+        r = int(15 + ratio*20)
+        g = int(20 + ratio*25)
+        b = int(40 + ratio*55)
+        for y in range(TH):
+            img.putpixel((x,y),(r,g,b))
+
+    # 右側：主播頭貼（全身佔右 45%）
+    photo = _load_presenter_photo()
+    RX2 = int(TW*0.54)
+    if photo:
+        ph = photo.resize((TW-RX2, TH), Image.LANCZOS)
+        # 左側漸淡遮罩
+        fade = Image.new("RGBA",(TW-RX2,TH),(0,0,0,0))
+        for x in range(min(200,TW-RX2)):
+            alpha = int(255*(1-x/200))
+            for y2 in range(TH):
+                fade.putpixel((x,y2),(ETHAN["bg_dark"][0],
+                                       ETHAN["bg_dark"][1],
+                                       ETHAN["bg_dark"][2],alpha))
+        ph_rgba = ph.convert("RGBA")
+        ph_merged = Image.alpha_composite(ph_rgba, fade)
+        img.paste(ph_merged.convert("RGB"), (RX2,0))
+        d = ImageDraw.Draw(img)
+
+    # 左側文字區
+    # 頻道標籤
+    ch_badge = "Vivi AI研習社"
+    d.rectangle([(36,36),(36+d.textlength(ch_badge,font=_f(28,True))+24,36+46)],
+                fill=ETHAN["accent"])
+    d.text((48,42), ch_badge, font=_f(28,True), fill=(255,255,255))
+
+    # 工具 badge
+    tool_badge = f"🔧 {tool}"
+    d.rectangle([(36,94),(36+d.textlength(tool_badge,font=_f(26,True))+20,94+40)],
+                fill=ETHAN["bg_card"])
+    d.text((46,98), tool_badge, font=_f(26,True), fill=ETHAN["accent2"])
+
+    # 主標題（2行，最大56px）
+    words = title; max_w = RX2 - 60
+    lines = []
+    cur = ""
+    for ch in words:
+        test = cur+ch
+        if d.textlength(test,font=_f(56,True)) < max_w:
+            cur = test
+        else:
+            lines.append(cur); cur=ch
+    if cur: lines.append(cur)
+    ty = 152
+    for line in lines[:3]:
+        d.text((36,ty), line, font=_f(56,True), fill=ETHAN["text_w"])
+        ty += 68
+
+    # 橙色分隔線
+    d.rectangle([(36,ty+8),(min(RX2-60,360),ty+12)], fill=ETHAN["accent"])
+    ty += 28
+
+    # 痛點列表（小字）
+    for i,pt in enumerate(pain_pts[:3]):
+        d.text((36,ty+i*40), f"• {pt[:18]}", font=_f(30), fill=ETHAN["text_dim"])
+
+    # 右下數字徽章（視覺衝擊）
+    num_str = "3步驟"
+    num_x,num_y = TW-220, TH-120
+    d.ellipse([(num_x-60,num_y-60),(num_x+60,num_y+60)], fill=ETHAN["accent"])
+    d.text((num_x-28,num_y-22), num_str, font=_f(28,True), fill=(255,255,255))
+
+    img.save(output_path,"JPEG",quality=95)
+    print(f"  🖼️ 縮圖生成：{output_path}")
+    return output_path
+
 C = dict(
     bg=(242,239,234), brand_bg=(34,24,12), gold=(206,158,68),
     sep=(160,84,38),  accent=(160,84,38),  acdk=(108,50,14),
@@ -999,23 +1163,47 @@ def render_tutorial_video(segments: dict, steps: list,
     pain_pts = steps[0].get("pain_points", []) if steps else []
     win_pts  = steps[0].get("win_points", [])  if steps else []
 
+    # 預先載入主播頭貼（所有 clip 共用）
+    _load_presenter_photo()
+
+    # 生成 Ethan 式縮圖（上傳 YouTube 用）
+    pain_pts2 = steps[0].get("pain_points",[]) if steps else []
+    tool_name = steps[0].get("tool_name","AI") if steps else "AI"
+    thumb_path = _ethan_thumbnail(title, tool_name, pain_pts2, "thumbnail.jpg")
+
+    def _with_pip(clip):
+        """在 clip 每一幀右下角疊加圓形主播頭貼"""
+        if _load_presenter_photo() is None:
+            return clip
+        def _frame(t):
+            frame = Image.fromarray(clip.get_frame(t))
+            return np.array(_add_pip(frame, t))
+        from moviepy.editor import VideoClip as _VC
+        new_clip = _VC(_frame, duration=clip.duration)
+        if clip.audio:
+            new_clip = new_clip.set_audio(clip.audio)
+        return new_clip
+
     clips = []
-    clips.append(_hook_clip(pain_pts, win_pts, title,
-                             segments.get("pain",""), segments.get("win","")))
-    print("  ✅ Hook（Unsplash 封面照片）")
+    hook = _hook_clip(pain_pts, win_pts, title,
+                      segments.get("pain",""), segments.get("win",""))
+    clips.append(_with_pip(hook))
+    print("  ✅ Hook（主播PiP）")
 
     for i, step in enumerate(steps, 1):
-        clips.append(_step_clip(step, title, len(steps),
-                                segments.get(f"step{i}_type",""),
-                                segments.get(f"step{i}_out","")))
+        sc = _step_clip(step, title, len(steps),
+                        segments.get(f"step{i}_type",""),
+                        segments.get(f"step{i}_out",""))
+        clips.append(_with_pip(sc))
         tag = "🖼️ 簡報預覽" if step.get("is_slide_step") else "⌨️ 打字動畫"
-        print(f"  ✅ Step {i} [{tag}]")
+        print(f"  ✅ Step {i} [{tag}]（主播PiP）")
 
     clips.append(_prompt_slide_clip(steps, title, duration=7.0))
     print("  ✅ Prompt 結尾頁（截圖直接套用）")
 
-    clips.append(_cta_clip(title, segments.get("cta","")))
-    print("  ✅ CTA")
+    cta = _cta_clip(title, segments.get("cta",""))
+    clips.append(_with_pip(cta))
+    print("  ✅ CTA（主播PiP）")
 
     final = concatenate_videoclips(clips, method="compose")
     # 確保輸出是正確的 1920x1080（moviepy size 參數不可靠，改用 resize）
@@ -1027,4 +1215,4 @@ def render_tutorial_video(segments: dict, steps: list,
     dur  = sum(c.duration for c in clips)
     size = Path(output).stat().st_size // (1024*1024)
     print(f"  ✅ {output} | {dur:.0f}s | {size} MB")
-    return output
+    return output, thumb_path

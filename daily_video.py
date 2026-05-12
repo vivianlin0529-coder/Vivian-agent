@@ -639,11 +639,36 @@ def generate_voice_segments(narrations: dict) -> dict:
 # ═══════════════════════════════════════════
 # 影片渲染（分段音頻版）
 # ═══════════════════════════════════════════
+def _upload_thumbnail(youtube_url: str, thumb_path: str):
+    """上傳縮圖到 YouTube（須 thumbnails.set 權限）"""
+    video_id = youtube_url.split("v=")[-1] if "v=" in youtube_url else youtube_url
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+    from google.auth.transport.requests import Request
+    import pickle
+    try:
+        with open("token.pickle","rb") as _f:
+            creds = pickle.load(_f)
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        yt = build("youtube","v3",credentials=creds)
+        yt.thumbnails().set(
+            videoId=video_id,
+            media_body=MediaFileUpload(thumb_path, mimetype="image/jpeg")
+        ).execute()
+        print(f"  🖼️ 縮圖已上傳 → video_id={video_id}")
+    except Exception as e:
+        print(f"  ⚠️ 縮圖上傳失敗：{e}")
+
 def render_video(seg_files: dict, steps: list,
-                 title: str, output: str = "video_final.mp4") -> str:
+                 title: str, output: str = "video_final.mp4"):
     print("\n🎬 渲染影片（分段同步版）...")
     from video_renderer import render_tutorial_video
-    return render_tutorial_video(seg_files, steps, title, output)
+    result = render_tutorial_video(seg_files, steps, title, output)
+    # render_tutorial_video 回傳 (video_path, thumb_path)
+    if isinstance(result, tuple):
+        return result
+    return result, None  # fallback
 
 
 # ═══════════════════════════════════════════
@@ -807,6 +832,9 @@ def main():
     else:
         preview_path = "daily_preview_video.mp4"
         shutil.copy(video_path, preview_path)
+        if thumb_path and Path(thumb_path).exists():
+            shutil.copy(thumb_path, "preview_thumbnail.jpg")
+            print("   🖼️ 縮圖：preview_thumbnail.jpg")
         print(f"\n✅ PREVIEW 完成！")
         print(f"   📦 影片：{preview_path}（請至 GitHub Actions → Artifacts 下載確認）")
         print(f"   📋 Meta：{meta_path}")
