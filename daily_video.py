@@ -631,6 +631,111 @@ def main():
     save_used_topic(best["title"])
 
     narration, title, description, tags, steps, narrations = generate_script(best)
+
+    # ══ 四項內容產出（視覺概念 / 影片規劃 / 社群文案 / 30天計畫）══
+    print("\n🎨 產出視覺圖文設計概念...")
+    visual_concept = _gemini_json(f"""
+你是台灣品牌視覺設計師。根據以下高分選題，產出一個現代精緻的視覺圖文設計概念。
+選題：{best['title']}  工具：{best.get('tool','')}
+
+請定義（JSON格式）：
+{{
+  "main_title": "主標題（15字內，強調痛點或結果）",
+  "sub_text": "輔助文字（20字內，說明方法或工具）",
+  "layout": "版面架構（例：左文右圖三欄式 / 全幅底圖浮字卡 / 上下分割對比）",
+  "spacing": "元素間距建議（例：標題四周留白40px，段落間距32px）",
+  "style": "視覺風格（例：深藍白金商務感 / 清新青綠漸層 / 暖橙動態感）",
+  "hook_layout_id": 從0到9選一個最適合此選題的版型編號,
+  "color_mood": "色調情緒（例：專業信任感 / 輕鬆效率感 / 緊迫行動感）"
+}}
+""")
+
+    print("\n🎬 產出影片剪輯規劃...")
+    video_plan = _gemini_json(f"""
+你是短影音剪輯導演。將以下選題轉換成15-30秒的短影音剪輯規劃。
+選題：{best['title']}  工具：{best.get('tool','')}
+
+請逐鏡頭說明（JSON格式）：
+{{
+  "total_duration": "總長度（秒）",
+  "shots": [
+    {{
+      "shot": 1,
+      "content": "畫面內容描述",
+      "duration": "秒數",
+      "transition": "轉場方式（例：硬切/淡入/滑入）",
+      "subtitle": "字幕文字設計（字型大小/顏色/位置）",
+      "rhythm": "節奏感受（快速衝擊/緩慢呼吸/中等穩健）",
+      "elements": "畫面元素安排（例：左三分之一文字 右照片 底部進度條）"
+    }}
+  ]
+}}
+""", array=False)
+
+    print("\n📱 產出社群文案...")
+    social_copy = _gemini_json(f"""
+你是台灣社群內容行銷專家。為以下選題撰寫優化後的社群文案。
+選題：{best['title']}  工具：{best.get('tool','')}
+語氣風格：專業溫暖親切
+
+請輸出（JSON格式）：
+{{
+  "hook": "開頭Hook（前兩行一定要讓人想繼續看，20字內）",
+  "body": "主要內容段落（說明方法/效果/場景，100字內）",
+  "cta": "行動呼籲（引導留言/訂閱/分享，20字內）",
+  "hashtags": ["#AI工具","#職場效率","#Vivi AI研習社","（再加5個相關標籤）"],
+  "ig_caption": "完整IG文案（hook+body+cta+hashtags合併，繁體中文）",
+  "linkedin_caption": "LinkedIn版文案（稍正式，200字內）"
+}}
+""")
+
+    print("\n📅 產出30天發文計畫...")
+    plan_30 = _gemini_json(f"""
+你是台灣 AI 教學頻道「Vivi AI研習社」的內容策略師。
+以「{best['title']}」為本週主題，建立一份完整的30天發文計畫。
+
+優先考慮：內容穩定發布、受眾互動率、內容多樣性。
+目標受眾：台灣非技術背景上班族（PM、業務、行政、主管）
+
+請輸出 JSON 陣列（30筆）：
+[{{
+  "day": 1,
+  "type": "內容形式（例：教學短影片/知識圖卡/問答互動/幕後花絮/使用者見證）",
+  "topic": "當天主題（15字內）",
+  "visual_hint": "視覺設計提示（20字內）",
+  "video_direction": "影片或剪輯方向（20字內）",
+  "copy_hint": "文案撰寫提示（20字內）",
+  "post_time": "建議發文時間（例：07:30/12:00/20:00）",
+  "platform": "主要平台（YouTube/IG/LinkedIn）"
+}}]
+""", array=True)
+
+    # 儲存四項產出到 meta JSON
+    content_meta = {{
+        "topic": best,
+        "visual_concept": visual_concept,
+        "video_plan": video_plan,
+        "social_copy": social_copy,
+        "plan_30": plan_30,
+        "generated_at": datetime.datetime.now().isoformat()
+    }}
+    with open("content_meta.json", "w", encoding="utf-8") as f:
+        json.dump(content_meta, f, ensure_ascii=False, indent=2)
+    print(f"  💾 四項內容已儲存至 content_meta.json")
+
+    # 用視覺概念決定 hook layout（如果有）
+    if visual_concept and isinstance(visual_concept, dict):
+        layout_hint = visual_concept.get("hook_layout_id")
+        if isinstance(layout_hint, int):
+            os.environ["HOOK_LAYOUT_OVERRIDE"] = str(layout_hint)
+            print(f"  🎨 視覺概念建議版型：#{layout_hint} ({visual_concept.get('style','')})")
+
+    # 把社群文案補充到 YouTube description
+    if social_copy and isinstance(social_copy, dict):
+        ig = social_copy.get("ig_caption","")
+        if ig:
+            description = description + f"\n\n─────────\n{ig}"
+
     seg_files = generate_voice_segments(narrations)
 
     date_str  = datetime.datetime.now().strftime("%Y%m%d_%H%M")

@@ -568,8 +568,10 @@ def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     title_h   = int(_hl.md5(title.encode()).hexdigest(), 16)
     combined  = day_ord ^ title_h
 
-    # 選 layout（10 種）
-    layout_id  = combined % 10
+    # 選 layout（10 種）— 優先讀視覺概念建議，否則用 hash 決定
+    import os as _os
+    override = _os.environ.get("HOOK_LAYOUT_OVERRIDE", "")
+    layout_id = int(override) % 10 if override.isdigit() else combined % 10
 
     # 選主題照片池
     pain_pool, win_pool = _topic_photo_pools(title)

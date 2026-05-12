@@ -57,7 +57,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add used_topics.json topic_rankings.json used_photos.json || true
+          git add used_topics.json topic_rankings.json used_photos.json content_meta.json plan_30d.json || true
           git diff --cached --quiet || git commit -m "chore: update used_topics [skip ci]"
           git push || true
 
@@ -69,4 +69,5 @@ jobs:
           path: |
             video_final.mp4
             video_meta.json
+            content_meta.json
           retention-days: 14
