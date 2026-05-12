@@ -43,30 +43,32 @@ ETHAN = dict(
 # ── 載入主播頭貼（從 repo assets/ 或 env var URL）──────
 _PRESENTER_IMG: Image.Image | None = None
 
-def _load_presenter_photo() -> Image.Image | None:
-    global _PRESENTER_IMG
-    if _PRESENTER_IMG is not None:
-        return _PRESENTER_IMG
-    import os as _os
-    # 先找本地檔案
-    for loc in ["assets/vivi_avatar.jpg","assets/vivi.jpg","vivi_avatar.jpg"]:
+def _load_presenter_photo(seed: int = 0) -> "Image.Image | None":
+    """依 seed + 日期輪替 12 張頭貼，每支影片角度不同"""
+    import datetime as _dt, os as _os
+    day_num = _dt.date.today().toordinal()
+    idx     = ((day_num + seed) % 12) + 1   # 1~12
+
+    # 優先嘗試今天對應的頭貼，再 fallback 依序
+    order = [f"assets/vivi_avatar_{((day_num+seed+i)%12)+1:02d}.jpg" for i in range(12)]
+    order += ["assets/vivi_avatar.jpg","vivi_avatar.jpg"]
+    for loc in order:
         if Path(loc).exists():
             try:
-                _PRESENTER_IMG = Image.open(loc).convert("RGB")
-                print(f"   頭貼載入：{loc}")
-                return _PRESENTER_IMG
+                img = Image.open(loc).convert("RGB")
+                print(f"  頭貼 #{idx}：{loc}")
+                return img
             except: pass
-    # 再試 env var URL
+
+    # fallback：env var URL
     url = _os.getenv("PRESENTER_PHOTO_URL","")
     if url:
         try:
             resp = requests.get(url, timeout=15)
             if resp.status_code==200:
-                _PRESENTER_IMG = Image.open(io.BytesIO(resp.content)).convert("RGB")
-                print("   頭貼下載成功")
-                return _PRESENTER_IMG
+                return Image.open(io.BytesIO(resp.content)).convert("RGB")
         except: pass
-    print("  ️ 無頭貼，跳過 PiP")
+    print("  無頭貼，跳過 PiP")
     return None
 
 def _circular_pip(photo: Image.Image, size: int = 220) -> Image.Image:
