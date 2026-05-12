@@ -53,7 +53,7 @@ def _load_presenter_photo() -> Image.Image | None:
         if Path(loc).exists():
             try:
                 _PRESENTER_IMG = Image.open(loc).convert("RGB")
-                print(f"  👤 頭貼載入：{loc}")
+                print(f"   頭貼載入：{loc}")
                 return _PRESENTER_IMG
             except: pass
     # 再試 env var URL
@@ -63,10 +63,10 @@ def _load_presenter_photo() -> Image.Image | None:
             resp = requests.get(url, timeout=15)
             if resp.status_code==200:
                 _PRESENTER_IMG = Image.open(io.BytesIO(resp.content)).convert("RGB")
-                print("  👤 頭貼下載成功")
+                print("   頭貼下載成功")
                 return _PRESENTER_IMG
         except: pass
-    print("  ⚠️ 無頭貼，跳過 PiP")
+    print("  ️ 無頭貼，跳過 PiP")
     return None
 
 def _circular_pip(photo: Image.Image, size: int = 220) -> Image.Image:
@@ -97,7 +97,7 @@ def _add_pip(frame: Image.Image, t: float = 0) -> Image.Image:
     frame.paste(pip, (px, py), pip)
     # 名牌
     d = ImageDraw.Draw(frame)
-    badge = "Vivi｜AI研習社"
+    badge = "Vivi  AI研習社"
     bw = d.textlength(badge, font=_f(22,True)) + 20
     bx = px + (size+8-bw)//2
     by = py + size - 4
@@ -147,7 +147,7 @@ def _ethan_thumbnail(title: str, tool: str, pain_pts: list,
     d.text((48,42), ch_badge, font=_f(28,True), fill=(255,255,255))
 
     # 工具 badge
-    tool_badge = f"🔧 {tool}"
+    tool_badge = f"{tool}"
     d.rectangle([(36,94),(36+d.textlength(tool_badge,font=_f(26,True))+20,94+40)],
                 fill=ETHAN["bg_card"])
     d.text((46,98), tool_badge, font=_f(26,True), fill=ETHAN["accent2"])
@@ -183,7 +183,7 @@ def _ethan_thumbnail(title: str, tool: str, pain_pts: list,
     d.text((num_x-28,num_y-22), num_str, font=_f(28,True), fill=(255,255,255))
 
     img.save(output_path,"JPEG",quality=95)
-    print(f"  🖼️ 縮圖生成：{output_path}")
+    print(f"  ️ 縮圖生成：{output_path}")
     return output_path
 
 C = dict(
@@ -406,9 +406,9 @@ def _fetch_photo_url(url: str, w: int, h: int) -> "Image.Image | None":
         if resp.status_code == 200 and len(resp.content) > 20000:
             img = Image.open(io.BytesIO(resp.content)).convert("RGB")
             return img.resize((w, h), Image.LANCZOS)
-        print(f"  ⚠️ 照片 HTTP {resp.status_code}")
+        print(f"  ️ 照片 HTTP {resp.status_code}")
     except Exception as ex:
-        print(f"  ⚠️ 照片下載失敗：{ex}")
+        print(f"  ️ 照片下載失敗：{ex}")
     return None
 
 
@@ -422,7 +422,7 @@ def _overlay(img: Image.Image, col: tuple, alpha: int) -> Image.Image:
 # ══════════════════════════════════════════════════════
 
 def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
-    """依 layout_id 繪製 pain 和 win 兩張靜態圖，回傳 (pain_arr, win_arr)"""
+    """依 layout_id 繪製 pain 和 win 兩張靜態圖回傳 (pain_arr, win_arr)"""
 
     # ── 通用輔助 ──────────────────────────────
     def _make(bg): 
@@ -443,12 +443,12 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
         d.rectangle([(x0, y0), (x0+tw2+pad*2, y0+58)], fill=bg)
         d.text((x0+pad, y0+10), text, font=_f(36, True), fill=fg)
 
-    # ── Layout 0：左文右照（改良版，無 X，accent border）──────────
+    # ── Layout 0左文右照改良版無 Xaccent border──────────
     if layout_id == 0:
         RED=(195,35,18); GRN=(18,132,38)
         pi, pd_ = _make((255,242,240))
         pd_.rectangle([(0,AY),(LW+18,AB)], fill=(255,224,220))
-        pd_.text((36,AY+22), "⚠  工作中的你", font=_f(40,True), fill=RED)
+        pd_.text((36,AY+22), "▌ 工作中的你", font=_f(40,True), fill=RED)
         pd_.rectangle([(36,AY+72),(LW-18,AY+76)], fill=RED)
         _pts(pd_, pain_pts, 36, AY+96, "—", RED, (100,30,20))
         if pain_img:
@@ -456,7 +456,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
         pd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=RED, width=5)
         wi, wd_ = _make((240,252,244))
         wd_.rectangle([(0,AY),(LW+18,AB)], fill=(218,248,224))
-        wd_.text((36,AY+22), "✓  用 AI 之後", font=_f(40,True), fill=GRN)
+        wd_.text((36,AY+22), "◆ 用 AI 之後", font=_f(40,True), fill=GRN)
         wd_.rectangle([(36,AY+72),(LW-18,AY+76)], fill=GRN)
         _pts(wd_, win_pts, 36, AY+96, "→", GRN, (12,64,18))
         if win_img:
@@ -465,7 +465,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
         wd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=GRN, width=5)
         return np.array(pi), np.array(wi)
 
-    # ── Layout 1：全幅照片底圖 + 半透明文字卡 ──────────────────
+    # ── Layout 1全幅照片底圖 + 半透明文字卡 ──────────────────
     if layout_id == 1:
         BLUE=(20,60,180); LBLUE=(0,120,210)
         pi = Image.new("RGB", (W,H), (230,235,252))
@@ -479,7 +479,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
         pi.paste(card, (20, AY+10), card)
         pi = pi.convert("RGB"); pd_ = ImageDraw.Draw(pi)
         _top(pd_, title); _bot(pd_)
-        pd_.text((48,AY+36), "📊 你每天浪費多少時間？", font=_f(38,True), fill=BLUE)
+        pd_.text((48,AY+36), "時間你每天浪費多少", font=_f(38,True), fill=BLUE)
         pd_.rectangle([(48,AY+88),(660,AY+92)], fill=BLUE)
         _pts(pd_, pain_pts, 48, AY+106, "▶", BLUE, (20,40,120), size=29, spacing=54, maxw=580)
         wi = Image.new("RGB", (W,H), (230,245,255))
@@ -492,16 +492,16 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
         wi.paste(card2, (20,AY+10), card2)
         wi = wi.convert("RGB"); wd_ = ImageDraw.Draw(wi)
         _top(wd_, title); _bot(wd_)
-        wd_.text((48,AY+36), "🚀 AI 接手之後", font=_f(38,True), fill=LBLUE)
+        wd_.text((48,AY+36), "AI接手之後", font=_f(38,True), fill=LBLUE)
         wd_.rectangle([(48,AY+88),(660,AY+92)], fill=LBLUE)
         _pts(wd_, win_pts, 48, AY+106, "▶", LBLUE, (0,70,140), size=29, spacing=54, maxw=580)
         _badge(wd_, "效率直接翻倍", 340, AY+AH-70, LBLUE, (255,255,255))
         return np.array(pi), np.array(wi)
 
-    # ── Layout 2：右文左照（反轉）+ 橙色主題 ──────────────────
+    # ── Layout 2右文左照反轉+ 橙色主題 ──────────────────
     if layout_id == 2:
         ORG=(200,80,0); YLW=(180,130,0)
-        LPH = W - RX - 14   # 左側寬度（照片）
+        LPH = W - RX - 14   # 左側寬度照片
         RPX = LPH + 20       # 右側文字起點
         RPW = W - RPX - 20
         pi, pd_ = _make((255,246,235))
@@ -509,7 +509,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
             ph = pain_img.resize((LPH, AH), Image.LANCZOS)
             pi.paste(_overlay(ph,(140,50,0),60), (0,AY))
         pd_.rectangle([(RPX,AY),(W-8,AB)], fill=(255,232,210))
-        pd_.text((RPX+20,AY+22), "🔥 Deadline", font=_f(44,True), fill=ORG)
+        pd_.text((RPX+20,AY+22), "Deadline", font=_f(44,True), fill=ORG)
         pd_.text((RPX+20,AY+72), "壓力山大", font=_f(36,True), fill=ORG)
         pd_.rectangle([(RPX+20,AY+118),(W-28,AY+122)], fill=ORG)
         _pts(pd_, pain_pts, RPX+20, AY+136, "!", ORG, (120,50,0), size=27, spacing=52, maxw=RPW-30)
@@ -519,15 +519,15 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
             wh = win_img.resize((LPH, AH), Image.LANCZOS)
             wi.paste(_overlay(wh,(110,80,0),50), (0,AY))
         wd_.rectangle([(RPX,AY),(W-8,AB)], fill=(255,250,215))
-        wd_.text((RPX+20,AY+22), "⚡ AI 加速", font=_f(44,True), fill=YLW)
+        wd_.text((RPX+20,AY+22), "AI 加速", font=_f(44,True), fill=YLW)
         wd_.text((RPX+20,AY+72), "準時交件", font=_f(36,True), fill=YLW)
         wd_.rectangle([(RPX+20,AY+118),(W-28,AY+122)], fill=YLW)
-        _pts(wd_, win_pts, RPX+20, AY+136, "★", YLW, (100,75,0), size=27, spacing=52, maxw=RPW-30)
+        _pts(wd_, win_pts, RPX+20, AY+136, "", YLW, (100,75,0), size=27, spacing=52, maxw=RPW-30)
         _badge(wd_, "不再趕 Deadline", RPX+RPW//2, AY+AH-70, YLW, (255,255,255))
         wd_.rectangle([(LPH-2,AY-2),(LPH+2,AB+2)], fill=YLW)
         return np.array(pi), np.array(wi)
 
-    # ── Layout 3：上下分割 — 照片上半，文字下半 ──────────────────
+    # ── Layout 3上下分割 — 照片上半文字下半 ──────────────────
     if layout_id == 3:
         PUR=(120,30,190); TEAL=(0,160,130)
         MID = AY + (AB-AY)//2
@@ -536,7 +536,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
             ph = pain_img.resize((W, MID-AY), Image.LANCZOS)
             pi.paste(_overlay(ph,(80,10,140),80), (0,AY))
         pd_.rectangle([(0,MID),(W,AB)], fill=(235,220,255))
-        pd_.text((40,MID+16), "😩  你卡關的地方", font=_f(38,True), fill=PUR)
+        pd_.text((40,MID+16), "▸ 你卡關的地方", font=_f(38,True), fill=PUR)
         pd_.rectangle([(40,MID+62),(W-40,MID+66)], fill=PUR)
         # 橫排 2x2 痛點
         pts2 = pain_pts[:4]
@@ -550,7 +550,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
             wi.paste(_overlay(wh,(0,100,80),70), (0,AY))
             _badge(wd_, "AI 一鍵解決", W//2, AY+(MID-AY)//2, TEAL, (255,255,255))
         wd_.rectangle([(0,MID),(W,AB)], fill=(215,248,240))
-        wd_.text((40,MID+16), "✨  AI 之後的你", font=_f(38,True), fill=TEAL)
+        wd_.text((40,MID+16), "◆ AI 之後的你", font=_f(38,True), fill=TEAL)
         wd_.rectangle([(40,MID+62),(W-40,MID+66)], fill=TEAL)
         col_w2 = (W-80)//2
         for i, p in enumerate(win_pts[:4]):
@@ -558,7 +558,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
             _safe_text(wd_, (cx2,cy2), f"→ {p}", font=_f(28), fill=(0,90,75), max_width=col_w2-20)
         return np.array(pi), np.array(wi)
 
-    # ── Layout 4：大數字衝擊 — 中央數字 + 兩側文字 ──────────────
+    # ── Layout 4大數字衝擊 — 中央數字 + 兩側文字 ──────────────
     if layout_id == 4:
         NAVY=(15,35,120); GOLD=(190,140,20)
         pi, pd_ = _make((235,240,255))
@@ -566,9 +566,9 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
             pi.paste(_overlay(pain_img,(10,20,90),140), (0,AY))
         pd_ = ImageDraw.Draw(pi); _top(pd_, title); _bot(pd_)
         # 中央大數字
-        pd_.text((W//2-80, AY+40), "3h", font=_f(200,True), fill=(255,80,80,200))
-        pd_.text((W//2-220, AY+240), "你每天花在這件事上的時間", font=_f(32,True), fill=(255,255,255))
-        # 左右痛點（覆蓋在照片上）
+        pd_.text((W//2-80, AY+40), "3h", font=_f(200,True), fill=(255,100,80))
+        pd_.text((W//2-220, AY+240), "你每天花在這件事上的時間", font=_f(32,True), fill=(240,240,255))
+        # 左右痛點覆蓋在照片上
         for i,p in enumerate(pain_pts[:2]):
             _safe_text(pd_, (40, AY+120+i*70), f"—  {p}", font=_f(30,True), fill=(255,220,200), max_width=400)
         for i,p in enumerate(pain_pts[2:4]):
@@ -585,7 +585,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
             _safe_text(wd_, (W-460, AY+120+i*70), f"→  {p}", font=_f(30,True), fill=(180,255,210), max_width=400)
         return np.array(pi), np.array(wi)
 
-    # ── Layout 5：黑金質感 — 深色底，金色文字 ──────────────────
+    # ── Layout 5黑金質感 — 深色底金色文字 ──────────────────
     if layout_id == 5:
         BG_D=(28,22,10); GLD=(206,158,68); LGLD=(245,210,120)
         pi, pd_ = _make(BG_D)
@@ -595,7 +595,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
             pi.paste(ph.resize((RW,AH),Image.LANCZOS), (RX,AY))
         # 左側金色裝飾線
         pd_.rectangle([(40,AY+30),(44,AB-30)], fill=GLD)
-        pd_.text((60,AY+30), "📌", font=_f(40), fill=GLD)
+        pd_.text((60,AY+30), "▸", font=_f(40), fill=GLD)
         pd_.text((60,AY+80), "職場痛點", font=_f(48,True), fill=GLD)
         pd_.rectangle([(60,AY+138),(LW-20,AY+142)], fill=GLD)
         _pts(pd_, pain_pts, 60, AY+158, "·", GLD, LGLD, size=30, spacing=56, maxw=LW-80)
@@ -606,7 +606,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
             wh = _overlay(win_img,(28,22,10),140)
             wi.paste(wh.resize((RW,AH),Image.LANCZOS), (RX,AY))
         wd_.rectangle([(40,AY+30),(44,AB-30)], fill=GLD)
-        wd_.text((60,AY+30), "💼", font=_f(40), fill=GLD)
+        wd_.text((60,AY+30), "◆", font=_f(40), fill=GLD)
         wd_.text((60,AY+80), "AI 職場升級", font=_f(48,True), fill=GLD)
         wd_.rectangle([(60,AY+138),(LW-20,AY+142)], fill=GLD)
         _pts(wd_, win_pts, 60, AY+158, "◆", GLD, LGLD, size=30, spacing=56, maxw=LW-80)
@@ -614,14 +614,14 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
         wd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=GLD, width=3)
         return np.array(pi), np.array(wi)
 
-    # ── Layout 6：青藍清新 — 圓角卡片，條列式 ──────────────────
+    # ── Layout 6青藍清新 — 圓角卡片條列式 ──────────────────
     if layout_id == 6:
         TEAL=(0,140,180); MINT=(0,160,130)
         pi, pd_ = _make((230,248,255))
         if pain_img:
             pi.paste(_overlay(pain_img,(0,80,120),65).resize((RW,AH),Image.LANCZOS),(RX,AY))
         pd_.rectangle([(0,AY),(LW+18,AB)], fill=(208,240,255))
-        pd_.text((36,AY+22), "😓 每天都在重複", font=_f(40,True), fill=TEAL)
+        pd_.text((36,AY+22), "— 每天都在重複", font=_f(40,True), fill=TEAL)
         pd_.rectangle([(36,AY+72),(LW-18,AY+76)], fill=TEAL)
         _pts(pd_, pain_pts, 36, AY+96, "→", TEAL, (0,80,110), size=30, spacing=58, maxw=LW-50)
         pd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=TEAL, width=5)
@@ -629,43 +629,59 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
         if win_img:
             wi.paste(_overlay(win_img,(0,100,80),55).resize((RW,AH),Image.LANCZOS),(RX,AY))
         wd_.rectangle([(0,AY),(LW+18,AB)], fill=(205,248,238))
-        wd_.text((36,AY+22), "🎯 AI 自動化搞定", font=_f(40,True), fill=MINT)
+        wd_.text((36,AY+22), "→ AI 自動化搞定", font=_f(40,True), fill=MINT)
         wd_.rectangle([(36,AY+72),(LW-18,AY+76)], fill=MINT)
-        _pts(wd_, win_pts, 36, AY+96, "✦", MINT, (0,90,75), size=30, spacing=58, maxw=LW-50)
+        _pts(wd_, win_pts, 36, AY+96, "", MINT, (0,90,75), size=30, spacing=58, maxw=LW-50)
         _badge(wd_, "省時又省力", RX+RW//2, AY+50, MINT, (255,255,255))
         wd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=MINT, width=5)
         return np.array(pi), np.array(wi)
 
-    # ── Layout 7：卡片牆 — 4 格痛點卡片 ──────────────────────
+    # ── Layout 7左側卡片牆 + 右側照片不蓋人物──────────────
     if layout_id == 7:
-        PNK=(180,30,100); ROSE=(220,60,120)
-        pi, pd_ = _make((255,235,245))
+        PNK=(165,25,90); TEAL2=(0,145,105)
+        SPLIT = W // 2 - 30   # 左半最寬到畫面一半
+
+        # Pain
+        pi, pd_ = _make((245,232,242))
         if pain_img:
-            pi.paste(_overlay(pain_img,(130,10,60),150).resize((W,H-TOP_H-BOT_H),Image.LANCZOS),(0,AY))
+            # 照片只放右半不蓋左側文字
+            ph = pain_img.resize((W-SPLIT, AH), Image.LANCZOS)
+            pi.paste(_overlay(ph,(120,10,55),50), (SPLIT, AY))
         pd_ = ImageDraw.Draw(pi); _top(pd_, title); _bot(pd_)
-        pd_.text((W//2-200, AY+10), "📮 這些困擾你每天都有", font=_f(38,True), fill=(255,220,235))
-        # 2x2 卡片
-        CW=420; CH=200; GAP=20
-        ox=(W-CW*2-GAP)//2; oy=AY+70
+        # 左側垂直色條
+        pd_.rectangle([(0,AY),(6,AB)], fill=PNK)
+        pd_.text((22, AY+16), "▌ 這些困擾你每天都有", font=_f(36,True), fill=PNK)
+        pd_.rectangle([(22,AY+60),(SPLIT-20,AY+64)], fill=PNK)
+        # 2x2 卡片限制在左半
+        CW=(SPLIT-60)//2; CH=180; GAP=16
+        ox=22; oy=AY+80
         for i, p in enumerate(pain_pts[:4]):
             cx2=ox+(i%2)*(CW+GAP); cy2=oy+(i//2)*(CH+GAP)
-            pd_.rectangle([(cx2,cy2),(cx2+CW,cy2+CH)], fill=(255,255,255,200))
-            pd_.rectangle([(cx2,cy2),(cx2+CW,cy2+8)], fill=PNK)
-            _safe_text(pd_,(cx2+16,cy2+24), p, font=_f(30), fill=(100,20,60), max_width=CW-30)
-        wi, wd_ = _make((235,255,250))
+            pd_.rectangle([(cx2,cy2),(cx2+CW,cy2+CH)], fill=(255,255,255))
+            pd_.rectangle([(cx2,cy2),(cx2+CW,cy2+7)], fill=PNK)
+            _safe_text(pd_,(cx2+14,cy2+20), p, font=_f(29), fill=(90,15,55), max_width=CW-24)
+        # 右側照片分隔線
+        pd_.rectangle([(SPLIT,AY),(SPLIT+3,AB)], fill=PNK)
+
+        # Win
+        wi, wd_ = _make((232,248,242))
         if win_img:
-            wi.paste(_overlay(win_img,(0,80,50),140).resize((W,H-TOP_H-BOT_H),Image.LANCZOS),(0,AY))
+            wh = win_img.resize((W-SPLIT, AH), Image.LANCZOS)
+            wi.paste(_overlay(wh,(0,70,48),45), (SPLIT, AY))
         wd_ = ImageDraw.Draw(wi); _top(wd_, title); _bot(wd_)
-        TEAL2=(0,150,110)
-        wd_.text((W//2-200, AY+10), "AI 幫你一次解決", font=_f(38,True), fill=(200,255,235))
+        wd_.rectangle([(0,AY),(6,AB)], fill=TEAL2)
+        wd_.text((22, AY+16), "◆ AI 幫你一次解決", font=_f(36,True), fill=TEAL2)
+        wd_.rectangle([(22,AY+60),(SPLIT-20,AY+64)], fill=TEAL2)
+        ox2=22; oy2=AY+80
         for i, p in enumerate(win_pts[:4]):
-            cx2=ox+(i%2)*(CW+GAP); cy2=oy+(i//2)*(CH+GAP)
-            wd_.rectangle([(cx2,cy2),(cx2+CW,cy2+CH)], fill=(255,255,255,210))
-            wd_.rectangle([(cx2,cy2),(cx2+CW,cy2+8)], fill=TEAL2)
-            _safe_text(wd_,(cx2+16,cy2+24), p, font=_f(30), fill=(0,80,55), max_width=CW-30)
+            cx2=ox2+(i%2)*(CW+GAP); cy2=oy2+(i//2)*(CH+GAP)
+            wd_.rectangle([(cx2,cy2),(cx2+CW,cy2+CH)], fill=(255,255,255))
+            wd_.rectangle([(cx2,cy2),(cx2+CW,cy2+7)], fill=TEAL2)
+            _safe_text(wd_,(cx2+14,cy2+20), p, font=_f(29), fill=(0,70,50), max_width=CW-24)
+        wd_.rectangle([(SPLIT,AY),(SPLIT+3,AB)], fill=TEAL2)
         return np.array(pi), np.array(wi)
 
-    # ── Layout 8：簡約留白 — 大字標題 + 細緻條列 ──────────────
+    # ── Layout 8簡約留白 — 大字標題 + 細緻條列 ──────────────
     if layout_id == 8:
         IND=(40,40,160); SLATE=(80,80,120)
         pi, pd_ = _make((248,248,255))
@@ -687,10 +703,10 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
             wi.paste(_overlay(win_img,(20,90,40),60).resize((580,AH),Image.LANCZOS),(W-600,AY))
         return np.array(pi), np.array(wi)
 
-    # ── Layout 9：電影感橫幅 — 黑底白字+彩色accent ──────────────
+    # ── Layout 9電影感橫幅 — 黑底白字+彩色accent ──────────────
     if layout_id == 9:
         BK=(18,18,18); WT=(245,245,245)
-        # 隨機 accent（依 title hash）
+        # 隨機 accent依 title hash
         import hashlib as _hl
         hx=int(_hl.md5(title.encode()).hexdigest()[:4],16)
         accents=[(220,60,60),(60,140,220),(200,120,20),(140,60,200),(20,160,130)]
@@ -721,7 +737,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
 
 
 # ══════════════════════════════════════════════════════
-# Hook clip（10 版型 + 主題照片 + 無 X 標示）
+# Hook clip10 版型 + 主題照片 + 無 X 標示
 # ══════════════════════════════════════════════════════
 def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     pd_ = min(_audio_dur(pain_audio), 3.5)
@@ -744,7 +760,7 @@ def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
     pain_url = _pick_photo_url(pain_pool, combined,   used_photos)
     win_url  = _pick_photo_url(win_pool,  combined+7, used_photos)
 
-    print(f"  🎨 Hook 版型 #{layout_id}  痛點圖={pain_url[-30:]}  成果圖={win_url[-30:]}")
+    print(f"   Hook 版型 #{layout_id}  痛點圖={pain_url[-30:]}  成果圖={win_url[-30:]}")
 
     pain_img = _fetch_photo_url(pain_url, RW, AH)
     win_img  = _fetch_photo_url(win_url,  RW, AH)
@@ -850,7 +866,7 @@ def _render_claude_ui(pw: int, ph: int, prompt_text: str, out_lines: list,
         for ln in (out_lines or [])[:max_lines]:
             if oy + 27 > resp_bot - 4: break
             col = CLAUDE_ORG if ln.startswith(
-                ("•", "【", "✅", "⚠️", "→", "—", "📌", "💡",
+                ("•", "【", "", "️", "→", "—", "▸", "",
                  "第", "0", "1", "2", "3", "4", "5")) else TEXT_DK
             while ln and d.textlength(ln, font=fnt_body) > bubble_w - 22:
                 ln = ln[:-1]
@@ -878,7 +894,7 @@ def _render_slide_preview(outline_items: list, title: str,
 
     # 標題列
     d.rectangle([(0, 0), (pw, 54)], fill=SLIDE_ACC)
-    _safe_text(d, (16, 13), f"🎬 {title}", font=_f(24, True),
+    _safe_text(d, (16, 13), f" {title}", font=_f(24, True),
                fill=(255, 255, 255), max_width=pw - 32)
 
     # 投影片卡片
@@ -899,7 +915,7 @@ def _render_slide_preview(outline_items: list, title: str,
                    max_width=pw - PAD * 2 - NW - 22)
         y += card_h + 8
 
-    d.text((pw - 90, ph - 30), "Gamma ✦", font=_f(18), fill=SLIDE_DIM)
+    d.text((pw - 90, ph - 30), "Gamma ", font=_f(18), fill=SLIDE_DIM)
     return img
 
 
@@ -946,7 +962,7 @@ def _step_clip(step, title, total, type_audio, out_audio):
         _safe_text(bd, (70, y+4), b, font=_f(28), fill=C["bd"], max_width=LW-80); y += 54
     if tip and y < AB-60:
         bd.rectangle([(22,y+8),(LW-4,y+52)], fill=C["acdk"])
-        _safe_text(bd, (36, y+16), f"💡 {tip}", font=_f(22), fill=(255,215,135), max_width=LW-48)
+        _safe_text(bd, (36, y+16), f" {tip}", font=_f(22), fill=(255,215,135), max_width=LW-48)
     base_arr = np.array(base)
 
     # ── 右側動態渲染 ──
@@ -995,7 +1011,7 @@ def _step_clip(step, title, total, type_audio, out_audio):
 
         # Prompt label & box
         d2.rectangle([(rx+PAD,y2),(W-22,y2+LBL)], fill=C["lbl"])
-        d2.text((rx+PAD+7, y2+4), "✏️  你輸入的指令", font=_f(15), fill=C["lblf"])
+        d2.text((rx+PAD+7, y2+4), "️  你輸入的指令", font=_f(15), fill=C["lblf"])
         y2 += LBL + 6
         y2_end = min(y2+PH, AB-PAD-80)  # 保護：不超過畫面
         if y2 < y2_end:
@@ -1016,9 +1032,9 @@ def _step_clip(step, title, total, type_audio, out_audio):
 
         d2.rectangle([(rx+PAD,y2),(W-22,y2+LBL)], fill=C["lbl"])
         if is_slide_step:
-            d2.text((rx+PAD+7, y2+4), "🖼️  AI 生成的簡報", font=_f(15), fill=C["lblf"])
+            d2.text((rx+PAD+7, y2+4), "️  AI 生成的簡報", font=_f(15), fill=C["lblf"])
         else:
-            d2.text((rx+PAD+7, y2+4), "🤖  AI 輸出結果", font=_f(15), fill=C["lblf"])
+            d2.text((rx+PAD+7, y2+4), "  AI 輸出結果", font=_f(15), fill=C["lblf"])
         y2 += LBL + 6
 
         out_top    = y2
@@ -1048,7 +1064,7 @@ def _step_clip(step, title, total, type_audio, out_audio):
             for line in so.split("\n"):
                 if oy + 28 > out_bottom - 6: break
                 col = C["acdk2"] if line.startswith(
-                    ("•","【","✅","⚠️","→","—","📌","💡","第","0","1","2","3")) else C["ofg"]
+                    ("•","【","","️","→","—","▸","","第","0","1","2","3")) else C["ofg"]
                 d2.text((rx+PAD+10, oy), line[:38], font=_f(20), fill=col)
                 oy += 28
 
@@ -1091,11 +1107,11 @@ def _prompt_slide_clip(steps: list, title: str, duration: float = 7.0):
     d   = ImageDraw.Draw(img)
     # 頂列
     d.rectangle([(0,0),(W,TOP_H)], fill=(28,35,65))
-    d.text((60, 16), "📋  本集 Prompt 完整版  ·  複製貼上即可用", font=_f(34,True), fill=(255,210,80))
+    d.text((60, 16), "【Prompt 完整版】  複製貼上即可用", font=_f(34,True), fill=(255,210,80))
     d.rectangle([(0,TOP_H),(W,TOP_H+3)], fill=(80,100,200))
     # 底列
     d.rectangle([(0,H-BOT_H),(W,H)], fill=(28,35,65))
-    d.text((60,H-BOT_H+14), "🔔 訂閱 Vivi AI研習社  ·  每週更新職場 AI 實戰教學", font=_f(26), fill=(160,175,210))
+    d.text((60,H-BOT_H+14), "訂閱 Vivi AI研習社  ·  每週更新職場 AI 實戰教學", font=_f(26), fill=(160,175,210))
 
     card_bgs  = [(42,55,110),(35,70,58),(65,42,90)]
     card_accs = [(100,140,255),(60,200,140),(180,100,255)]
@@ -1143,8 +1159,8 @@ def _cta_clip(title, cta_audio):
     _top(d, title); _bot(d)
     d.rectangle([(110,H//2-3),(W-110,H//2+1)], fill=C["sep"])
     for txt, sz, bold, yo in [
-        ("🔔  訂閱 Vivi AI研習社，每週更新職場 AI 實戰", 50, True, -68),
-        ("👇  留言你想學的工具，我下週教你", 40, False, 28),
+        ("訂閱 Vivi AI研習社，每週更新職場 AI 實戰", 50, True, -68),
+        ("留言你想學的工具，我下週教你", 40, False, 28),
     ]:
         tw = d.textlength(txt, font=_f(sz,bold))
         d.text(((W-tw)//2, H//2+yo), txt, font=_f(sz,bold),
@@ -1159,7 +1175,7 @@ def _cta_clip(title, cta_audio):
 # ══════════════════════════════════════════════════════
 def render_tutorial_video(segments: dict, steps: list,
                           title: str = "", output: str = "video_final.mp4") -> str:
-    print(f"  🎬 渲染：{title}")
+    print(f"   渲染：{title}")
     pain_pts = steps[0].get("pain_points", []) if steps else []
     win_pts  = steps[0].get("win_points", [])  if steps else []
 
@@ -1188,31 +1204,31 @@ def render_tutorial_video(segments: dict, steps: list,
     hook = _hook_clip(pain_pts, win_pts, title,
                       segments.get("pain",""), segments.get("win",""))
     clips.append(_with_pip(hook))
-    print("  ✅ Hook（主播PiP）")
+    print("   Hook（主播PiP）")
 
     for i, step in enumerate(steps, 1):
         sc = _step_clip(step, title, len(steps),
                         segments.get(f"step{i}_type",""),
                         segments.get(f"step{i}_out",""))
         clips.append(_with_pip(sc))
-        tag = "🖼️ 簡報預覽" if step.get("is_slide_step") else "⌨️ 打字動畫"
-        print(f"  ✅ Step {i} [{tag}]（主播PiP）")
+        tag = "️ 簡報預覽" if step.get("is_slide_step") else "⌨️ 打字動畫"
+        print(f"   Step {i} [{tag}]（主播PiP）")
 
     clips.append(_prompt_slide_clip(steps, title, duration=7.0))
-    print("  ✅ Prompt 結尾頁（截圖直接套用）")
+    print("   Prompt 結尾頁（截圖直接套用）")
 
     cta = _cta_clip(title, segments.get("cta",""))
     clips.append(_with_pip(cta))
-    print("  ✅ CTA（主播PiP）")
+    print("   CTA（主播PiP）")
 
     final = concatenate_videoclips(clips, method="compose")
     # 確保輸出是正確的 1920x1080（moviepy size 參數不可靠，改用 resize）
     if final.w != W or final.h != H:
-        print(f"  ⚠️ 尺寸錯誤 {final.w}x{final.h}，強制 resize 至 {W}x{H}")
+        print(f"  ️ 尺寸錯誤 {final.w}x{final.h}，強制 resize 至 {W}x{H}")
         final = final.resize((W, H))
     final.write_videofile(output, fps=FPS, codec="libx264",
                           audio_codec="aac", preset="fast", logger=None)
     dur  = sum(c.duration for c in clips)
     size = Path(output).stat().st_size // (1024*1024)
-    print(f"  ✅ {output} | {dur:.0f}s | {size} MB")
+    print(f"   {output} | {dur:.0f}s | {size} MB")
     return output, thumb_path
