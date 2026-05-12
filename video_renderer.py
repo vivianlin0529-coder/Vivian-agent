@@ -254,7 +254,7 @@ def _overlay(img: Image.Image, col: tuple, alpha: int) -> Image.Image:
 
 
 # ══════════════════════════════════════════════════════
-# 10 種 Hook 版型繪製器
+# 10 種 Hook 版型繪製器（PPT多樣版型，每種架構完全不同）
 # ══════════════════════════════════════════════════════
 
 def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
@@ -288,7 +288,7 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
         pd_.rectangle([(36,AY+72),(LW-18,AY+76)], fill=RED)
         _pts(pd_, pain_pts, 36, AY+96, "—", RED, (100,30,20))
         if pain_img:
-            pi.paste(_overlay(pain_img,( 120,15,5),55), (RX,AY))
+            pi.paste(_overlay(pain_img,(120,15,5),45), (RX,AY))
         pd_.rectangle([(RX-2,AY-2),(W-12,AB+2)], outline=RED, width=5)
         wi, wd_ = _make((240,252,244))
         wd_.rectangle([(0,AY),(LW+18,AB)], fill=(218,248,224))
@@ -560,7 +560,8 @@ def _draw_layout(layout_id, pain_img, win_img, pain_pts, win_pts, title):
 # Hook clip（10 版型 + 主題照片 + 無 X 標示）
 # ══════════════════════════════════════════════════════
 def _hook_clip(pain_pts, win_pts, title, pain_audio, win_audio):
-    pd_ = _audio_dur(pain_audio); wd_ = _audio_dur(win_audio)
+    pd_ = min(_audio_dur(pain_audio), 3.5)   # 痛點最多3.5秒
+    wd_ = min(_audio_dur(win_audio),  3.5)   # 成果最多3.5秒
 
     import datetime as _dt, hashlib as _hl
     day_ord   = _dt.date.today().toordinal()
@@ -933,6 +934,71 @@ def _cta_clip(title, cta_audio):
     return clip
 
 # ══════════════════════════════════════════════════════
+# Prompt 結尾頁（讓觀眾截圖下載套用）
+# ══════════════════════════════════════════════════════
+def _prompt_slide_clip(steps: list, title: str, duration: float = 6.0):
+    """最後一頁：展示所有步驟的 Prompt，觀眾可截圖直接套用"""
+    img = Image.new("RGB", (W, H), (18, 22, 38))   # 深藍底
+    d   = ImageDraw.Draw(img)
+
+    # 頂部標題列
+    d.rectangle([(0,0),(W, TOP_H)], fill=(28, 35, 65))
+    d.text((W//2 - 260, 18), "📋  本集 Prompt 完整版  複製即可用", font=_f(36, True), fill=(255, 210, 80))
+    d.rectangle([(0, TOP_H),(W, TOP_H+3)], fill=(80, 100, 200))
+
+    # 底部 CTA
+    d.rectangle([(0, H-BOT_H),(W, H)], fill=(28, 35, 65))
+    d.text((W//2 - 280, H-BOT_H+14), "🔔  訂閱 Vivi AI研習社  ·  每週更新職場 AI 實戰技巧", font=_f(28), fill=(180, 190, 220))
+
+    # Prompt 卡片區（最多顯示3個步驟）
+    card_colors = [(42, 55, 110), (35, 70, 60), (65, 42, 90)]
+    accent_colors= [(100, 140, 255), (60, 200, 140), (180, 100, 255)]
+    pad = 28
+    card_h = (H - TOP_H - BOT_H - pad*4) // 3
+    y = TOP_H + pad
+
+    for i, step in enumerate(steps[:3]):
+        ep = step.get("example_prompt", "").strip()
+        heading = step.get("heading", f"Step {i+1}")
+        num = step.get("num", i+1)
+        acc = accent_colors[i % len(accent_colors)]
+        cbg = card_colors[i % len(card_colors)]
+
+        # 卡片背景
+        d.rectangle([(pad, y),(W-pad, y+card_h)], fill=cbg)
+        d.rectangle([(pad, y),(pad+6, y+card_h)], fill=acc)
+
+        # Step 標題
+        d.text((pad+18, y+10), f"Step {num}  {heading}", font=_f(28, True), fill=acc)
+        d.rectangle([(pad+18, y+46),(W-pad-18, y+50)], fill=acc)
+
+        # Prompt 文字（截斷顯示，最多4行）
+        lines = ep.replace("\n", " ").split()
+        wrapped = []
+        current = ""
+        for w2 in lines:
+            test = current + " " + w2 if current else w2
+            if d.textlength(test, font=_f(24)) < W - pad*3 - 20:
+                current = test
+            else:
+                if current: wrapped.append(current)
+                current = w2
+        if current: wrapped.append(current)
+
+        ty = y + 58
+        for line in wrapped[:4]:
+            if ty + 30 > y + card_h - 8: break
+            d.text((pad+18, ty), line, font=_f(24), fill=(220, 225, 240))
+            ty += 32
+
+        y += card_h + pad
+
+    arr = np.array(img)
+    clip = VideoClip(lambda t: arr, duration=duration)
+    return clip
+
+
+# ══════════════════════════════════════════════════════
 # 主入口
 # ══════════════════════════════════════════════════════
 def render_tutorial_video(segments: dict, steps: list,
@@ -952,6 +1018,9 @@ def render_tutorial_video(segments: dict, steps: list,
                                 segments.get(f"step{i}_out","")))
         tag = "🖼️ 簡報預覽" if step.get("is_slide_step") else "⌨️ 打字動畫"
         print(f"  ✅ Step {i} [{tag}]")
+
+    clips.append(_prompt_slide_clip(steps, title, duration=7.0))
+    print("  ✅ Prompt 結尾頁（可截圖套用）")
 
     clips.append(_cta_clip(title, segments.get("cta","")))
     print("  ✅ CTA")

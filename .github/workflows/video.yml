@@ -48,6 +48,7 @@ jobs:
           NOTION_VIDEO_DB:        ${{ secrets.NOTION_VIDEO_DB }}
           GOOGLE_CLIENT_SECRET:   ${{ secrets.GOOGLE_CLIENT_SECRET }}
           MANUAL_TOPIC:           ${{ github.event.inputs.topic }}
+          EXECUTION_MODE:         "FULL"
         run: python daily_video.py
 
       - name: Commit used_topics history

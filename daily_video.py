@@ -393,10 +393,10 @@ def generate_script(topic: dict) -> tuple:
 輸出 JSON：
 {{
   "title": "影片標題（25字內，含數字＋具體結果）",
-  "description": "說明欄（含工具、情境、3步摘要、hashtag）",
+  "description": "YouTube說明欄（300字內）\n格式：\n第一行：一句話說明影片價值\n\n【影片中使用的Prompt】\nStep1 Prompt：（直接貼入step1的example_prompt）\nStep2 Prompt：（直接貼入step2的example_prompt）\nStep3 Prompt：（直接貼入step3的example_prompt）\n\n✅ 複製貼上即可使用！\n\n#AI工具 #職場效率 #Vivi AI研習社",
   "tags": ["AI工具","Vivi AI研習社","職場效率"],
-  "narration_pain": "痛點旁白（35字，描述3個具體職場痛點，不提人名）",
-  "narration_win":  "成果旁白（35字，說明AI帶來的3個具體改變）",
+  "narration_pain": "痛點旁白（18字內，說1個最痛的職場情境，精準有力，不提人名）",
+  "narration_win":  "成果旁白（18字內，說AI帶來的最大改變，有具體數字更好）",
   "narration_cta":  "結尾旁白（30字，問一個問題＋邀訂閱）",
   "pain_points": ["痛點1（15字內）","痛點2（15字內）","痛點3（15字內）","痛點4（15字內）"],
   "win_points":  ["成果1（15字內）","成果2（15字內）","成果3（15字內）","成果4（15字內）"],
@@ -435,7 +435,15 @@ def generate_script(topic: dict) -> tuple:
     data  = _gemini_json(prompt)
     steps = data.get("steps",[])
     title = data.get("title", topic["title"])
-    desc  = data.get("description","")
+    # 把各步 prompt 注入 description（方便 YouTube 說明欄複製使用）
+    raw_desc = data.get("description", "")
+    prompt_block = "\n\n【本集使用的 AI Prompt，複製即可用】\n"
+    for s2 in data.get("steps", []):
+        ep = s2.get("example_prompt", "").strip()
+        if ep:
+            prompt_block += f"\n📌 Step {s2.get('num','?')}：{s2.get('heading','')}\n{ep}\n"
+    prompt_block += "\n✅ 更多 AI 實戰技巧 → 訂閱 Vivi AI研習社"
+    desc = raw_desc + prompt_block
     tags  = data.get("tags",["AI工具","Vivi AI研習社"])
 
     if steps:
