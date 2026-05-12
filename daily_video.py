@@ -43,6 +43,54 @@ _require("YOUTUBE_API_KEY", GOOGLE_TTS_KEY)
 gemini = genai_sdk.Client(api_key=GEMINI_KEY)
 GEMINI_MODEL = "gemini-2.5-flash"
 
+# ══════════════════════════════════════════════════════
+# 對標頻道風格（學長Ethan，14萬訂閱）— 類化成 Vivi AI研習社
+# ══════════════════════════════════════════════════════
+ETHAN_STYLE = {
+    "title_patterns": [
+        "{tool}完整教學：從零開始，{result}",
+        "{n}個步驟學會{tool}，職場馬上用得到",
+        "保姆級教學：{tool}怎麼用？{duration}分鐘帶你從入門到上手",
+        "你一定要會的{tool}技巧：{n}種用法一次搞定",
+        "【實戰】用{tool}直接做出{result}，不用再手動了",
+    ],
+    "hook_openers": [
+        "今天這支影片結束之後，你會直接能用{tool}做到{result}。",
+        "很多人問我{tool}到底怎麼用，今天我用{n}個步驟帶你全部搞清楚。",
+        "如果你還在用舊方法做{task}，看完這支你一定後悔沒早點看到。",
+        "我用{tool}把{task}的時間從{old_time}壓縮到{new_time}，今天教你怎麼做。",
+    ],
+    "step_connectors": [
+        "我們先來看第一步，",
+        "這裡有個重點，",
+        "你會發現，",
+        "接下來更厲害的是，",
+        "很多人不知道的是，",
+        "做完這步之後，",
+    ],
+    "cta_templates": [
+        "你剛剛學到的這{n}個步驟，今天下班前就可以試一次。記得訂閱，下週我還有更實用的。",
+        "覺得有用的話，留言告訴我你想學哪個工具，我下支影片教你。",
+        "如果你照著做遇到問題，留言告訴我，我來回答。訂閱起來，我每週更新。",
+    ],
+    "description_template": """👋 學完這支影片，你能直接做到：
+{outcomes}
+
+⏱️ 影片章節
+{timestamps}
+
+📋 本集使用的 Prompt（複製直接用）
+{prompts}
+
+─────────────────────
+🔔 訂閱 Vivi AI研習社，每週更新職場 AI 實戰教學
+💬 留言告訴我你想學哪個 AI 工具，我下支拍給你
+📌 追蹤 IG：@vivi.ai.channel
+─────────────────────
+#AI工具教學 #職場效率 #ViviAI研習社 #台灣AI #上班族必學""",
+}
+
+
 # ── 共用工具 ──────────────────────────────
 def _gemini_json(prompt: str, use_search: bool = False, array: bool = False):
     config_kwargs = {}
@@ -262,8 +310,16 @@ def analyze_viral_topics(manual_topic: str = "", manual_tool: str = "") -> dict:
 - 60 秒說清楚，標題含具體數字或成果
 - 指定工具（Claude / Gamma / Notion AI / ChatGPT / Canva AI / Perplexity 等）{used_block}
 
+【標題公式（仿學長Ethan 14萬訂閱風格，類化成Vivi版）】
+請優先使用以下模板組合標題：
+  A. {{工具名}}完整教學：{{n}}步驟讓你{{結果}}
+  B. 用{{工具}}直接做{{任務}}，不用再手動了
+  C. {{n}}個{{工具}}技巧，台灣上班族學完馬上能用
+  D. 保姆級教學：{{工具}}怎麼用？一支影片帶你從入門到上手
+  E. 很多人不知道的{{工具}}功能：{{n}}分鐘學完直接用{used_block}
+
 輸出 JSON 陣列（10 個，依市場潛力評分 1-10，分數可重複）：
-[{{"title":"...","appeal":"...","algorithm":"...","keyword":"...","tool":"...","score":9,"reason":"..."}}]
+[{{"title":"...","appeal":"...","algorithm":"...","keyword":"...","tool":"...","score":9,"reason":"...","title_formula":"A/B/C/D/E"}}]
 """
     raw_topics = _gemini_json(prompt, use_search=True, array=True)
     if not raw_topics:
@@ -373,13 +429,32 @@ def write_to_notion(videos: list, benchmark: dict, topic_title: str):
 def generate_script(topic: dict) -> tuple:
     print(f"\n✍️ 生成腳本：{topic['title']}")
     tool = topic.get("tool","Claude")
+    # 學長Ethan風格類化
+    import random as _random
+    hook_opener = _random.choice(ETHAN_STYLE["hook_openers"]).format(
+        tool=tool, task=topic.get("keyword","這件事"),
+        result="省下大量時間", n=3, old_time="2小時", new_time="10分鐘"
+    )
+    step_conn = _random.choice(ETHAN_STYLE["step_connectors"])
+    title_tmpl = _random.choice(ETHAN_STYLE["title_patterns"]).format(
+        tool=tool, result="職場效率倍增", n=3, duration=1
+    )
+
     prompt = f"""
-你是 Vivi，台灣職場 AI 教學 YouTuber。製作一支口說＋畫面完全同步的教學影片。
+你是 Vivi，台灣職場 AI 教學 YouTuber，風格類似「學長Ethan」（口語化、保姆級、數字框架）。
 選題：{topic['title']}  工具：{tool}
+
+【Ethan風格口條規則】
+- 開場白固定句型：「{hook_opener}」（之後才說痛點）
+- 步驟連接詞用：「{step_conn}」開頭
+- 全片用數字框架（3種方法、3個步驟、3件事）
+- 每段結尾預告下一段（「接下來更厲害的是...」）
+- 口語化：「我們先來看」「你會發現」「很多人不知道」
+- 標題靈感參考：{title_tmpl}
 
 【重要限制】
 - 禁止出現任何中文人名（用「主管」「客戶」「同事」「業務」代替）
-- 每段旁白字數嚴格控制：pain旁白35字內、win旁白35字內、每步typing旁白25字、每步output旁白25字、cta旁白30字
+- 每段旁白字數嚴格控制：pain旁白18字內、win旁白18字內、每步typing旁白25字、每步output旁白25字、cta旁白30字
 - Prompt 範本必須直接可用，不能是說明文字
 - 輸出範例要像真實 AI 輸出，有格式、有具體數字/日期/內容
 
@@ -435,15 +510,35 @@ def generate_script(topic: dict) -> tuple:
     data  = _gemini_json(prompt)
     steps = data.get("steps",[])
     title = data.get("title", topic["title"])
-    # 把各步 prompt 注入 description（方便 YouTube 說明欄複製使用）
-    raw_desc = data.get("description", "")
-    prompt_block = "\n\n【本集使用的 AI Prompt，複製即可用】\n"
+    # ── Ethan 風格 description 生成 ──
+    outcomes_list = []
+    for s2 in data.get("steps", []):
+        outcomes_list.append(f"✅ {s2.get('heading','')}")
+    outcomes_str = "\n".join(outcomes_list) or "✅ 學會本集 AI 工具操作"
+
+    # 時間戳（簡易估算）
+    ts = ["00:00 開場：你能學到什麼"]
+    t = 7
+    for s2 in data.get("steps", []):
+        ts.append(f"{t//60:02d}:{t%60:02d} Step {s2.get('num','?')}：{s2.get('heading','')}")
+        t += 14
+    ts.append(f"{t//60:02d}:{t%60:02d} Prompt 總覽（可截圖套用）")
+    ts.append(f"{t+7//60:02d}:{(t+7)%60:02d} 訂閱＆留言")
+    timestamps_str = "\n".join(ts)
+
+    # Prompt 區塊
+    prompt_lines = []
     for s2 in data.get("steps", []):
         ep = s2.get("example_prompt", "").strip()
         if ep:
-            prompt_block += f"\n📌 Step {s2.get('num','?')}：{s2.get('heading','')}\n{ep}\n"
-    prompt_block += "\n✅ 更多 AI 實戰技巧 → 訂閱 Vivi AI研習社"
-    desc = raw_desc + prompt_block
+            prompt_lines.append(f"📌 Step {s2.get('num')}：{s2.get('heading','')}\n{ep}")
+    prompts_str = "\n\n".join(prompt_lines)
+
+    desc = ETHAN_STYLE["description_template"].format(
+        outcomes=outcomes_str,
+        timestamps=timestamps_str,
+        prompts=prompts_str,
+    )
     tags  = data.get("tags",["AI工具","Vivi AI研習社"])
 
     if steps:
@@ -730,11 +825,12 @@ def main():
             os.environ["HOOK_LAYOUT_OVERRIDE"] = str(layout_hint)
             print(f"  🎨 視覺概念建議版型：#{layout_hint} ({visual_concept.get('style','')})")
 
-    # 把社群文案補充到 YouTube description
+    # 把 Gemini 社群文案的 hashtag 補入（避免重複）
     if social_copy and isinstance(social_copy, dict):
-        ig = social_copy.get("ig_caption","")
-        if ig:
-            description = description + f"\n\n─────────\n{ig}"
+        extra_tags = " ".join(social_copy.get("hashtags", []))
+        if extra_tags:
+            description = description + f"\n{extra_tags}"
+    print(f"  📋 YouTube Description ({len(description)}字) 已套用 Ethan 風格")
 
     seg_files = generate_voice_segments(narrations)
 
