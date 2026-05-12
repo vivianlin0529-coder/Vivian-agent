@@ -43,22 +43,20 @@ _require("YOUTUBE_API_KEY", GOOGLE_TTS_KEY)
 gemini = genai_sdk.Client(api_key=GEMINI_KEY)
 GEMINI_MODEL = "gemini-2.5-flash"
 
-# ══════════════════════════════════════════════════════
-# 對標頻道風格（學長Ethan，14萬訂閱）— 類化成 Vivi AI研習社
-# ══════════════════════════════════════════════════════
+# ══ 對標頻道風格（學長Ethan 14萬訂閱）類化成 Vivi AI研習社 ══
 ETHAN_STYLE = {
     "title_patterns": [
-        "{tool}完整教學：從零開始，{result}",
-        "{n}個步驟學會{tool}，職場馬上用得到",
-        "保姆級教學：{tool}怎麼用？{duration}分鐘帶你從入門到上手",
-        "你一定要會的{tool}技巧：{n}種用法一次搞定",
-        "【實戰】用{tool}直接做出{result}，不用再手動了",
+        "{tool}完整教學：{n}步驟讓你{result}",
+        "用{tool}直接做{task}，不用再手動了",
+        "{n}個{tool}技巧，台灣上班族學完馬上能用",
+        "保姆級教學：{tool}怎麼用？一支影片帶你從入門到上手",
+        "很多人不知道的{tool}功能：{n}分鐘學完直接用",
     ],
     "hook_openers": [
-        "今天這支影片結束之後，你會直接能用{tool}做到{result}。",
+        "今天這支影片結束之後，你能直接用{tool}做到{result}。",
         "很多人問我{tool}到底怎麼用，今天我用{n}個步驟帶你全部搞清楚。",
         "如果你還在用舊方法做{task}，看完這支你一定後悔沒早點看到。",
-        "我用{tool}把{task}的時間從{old_time}壓縮到{new_time}，今天教你怎麼做。",
+        "我用{tool}把{task}的時間省了一大半，今天教你怎麼做到。",
     ],
     "step_connectors": [
         "我們先來看第一步，",
@@ -66,12 +64,10 @@ ETHAN_STYLE = {
         "你會發現，",
         "接下來更厲害的是，",
         "很多人不知道的是，",
-        "做完這步之後，",
     ],
     "cta_templates": [
-        "你剛剛學到的這{n}個步驟，今天下班前就可以試一次。記得訂閱，下週我還有更實用的。",
+        "你剛學到的這{n}個步驟，今天下班前就可以試一次。記得訂閱，下週還有更多。",
         "覺得有用的話，留言告訴我你想學哪個工具，我下支影片教你。",
-        "如果你照著做遇到問題，留言告訴我，我來回答。訂閱起來，我每週更新。",
     ],
     "description_template": """👋 學完這支影片，你能直接做到：
 {outcomes}
@@ -79,17 +75,15 @@ ETHAN_STYLE = {
 ⏱️ 影片章節
 {timestamps}
 
-📋 本集使用的 Prompt（複製直接用）
+📋 本集使用的 Prompt（複製直接貼上就能用）
 {prompts}
 
 ─────────────────────
 🔔 訂閱 Vivi AI研習社，每週更新職場 AI 實戰教學
 💬 留言告訴我你想學哪個 AI 工具，我下支拍給你
-📌 追蹤 IG：@vivi.ai.channel
 ─────────────────────
 #AI工具教學 #職場效率 #ViviAI研習社 #台灣AI #上班族必學""",
 }
-
 
 # ── 共用工具 ──────────────────────────────
 def _gemini_json(prompt: str, use_search: bool = False, array: bool = False):
@@ -310,13 +304,13 @@ def analyze_viral_topics(manual_topic: str = "", manual_tool: str = "") -> dict:
 - 60 秒說清楚，標題含具體數字或成果
 - 指定工具（Claude / Gamma / Notion AI / ChatGPT / Canva AI / Perplexity 等）{used_block}
 
-【標題公式（仿學長Ethan 14萬訂閱風格，類化成Vivi版）】
-請優先使用以下模板組合標題：
-  A. {{工具名}}完整教學：{{n}}步驟讓你{{結果}}
+【標題公式（仿學長Ethan 風格，類化成 Vivi 版）】
+優先用以下模板組合標題：
+  A. {{工具}}完整教學：{{n}}步驟讓你{{結果}}
   B. 用{{工具}}直接做{{任務}}，不用再手動了
-  C. {{n}}個{{工具}}技巧，台灣上班族學完馬上能用
-  D. 保姆級教學：{{工具}}怎麼用？一支影片帶你從入門到上手
-  E. 很多人不知道的{{工具}}功能：{{n}}分鐘學完直接用{used_block}
+  C. {{n}}個{{工具}}技巧，上班族學完馬上能用
+  D. 保姆級：{{工具}}怎麼用？一支影片帶你從入門到上手
+  E. 很多人不知道的{{工具}}功能：{{n}}分鐘直接用{used_block}
 
 輸出 JSON 陣列（10 個，依市場潛力評分 1-10，分數可重複）：
 [{{"title":"...","appeal":"...","algorithm":"...","keyword":"...","tool":"...","score":9,"reason":"...","title_formula":"A/B/C/D/E"}}]
@@ -429,28 +423,26 @@ def write_to_notion(videos: list, benchmark: dict, topic_title: str):
 def generate_script(topic: dict) -> tuple:
     print(f"\n✍️ 生成腳本：{topic['title']}")
     tool = topic.get("tool","Claude")
-    # 學長Ethan風格類化
-    import random as _random
-    hook_opener = _random.choice(ETHAN_STYLE["hook_openers"]).format(
+
+    # Ethan 風格口條（每次隨機選）
+    import random as _rnd
+    _hook_opener = _rnd.choice(ETHAN_STYLE["hook_openers"]).format(
         tool=tool, task=topic.get("keyword","這件事"),
-        result="省下大量時間", n=3, old_time="2小時", new_time="10分鐘"
-    )
-    step_conn = _random.choice(ETHAN_STYLE["step_connectors"])
-    title_tmpl = _random.choice(ETHAN_STYLE["title_patterns"]).format(
-        tool=tool, result="職場效率倍增", n=3, duration=1
-    )
+        result="省下大量時間", n=3)
+    _step_conn   = _rnd.choice(ETHAN_STYLE["step_connectors"])
+    _cta_tmpl    = _rnd.choice(ETHAN_STYLE["cta_templates"]).format(n=3)
 
     prompt = f"""
-你是 Vivi，台灣職場 AI 教學 YouTuber，風格類似「學長Ethan」（口語化、保姆級、數字框架）。
+你是 Vivi，台灣職場 AI 教學 YouTuber，風格仿照「學長Ethan」（口語化、保姆級、數字框架）。
 選題：{topic['title']}  工具：{tool}
 
-【Ethan風格口條規則】
-- 開場白固定句型：「{hook_opener}」（之後才說痛點）
-- 步驟連接詞用：「{step_conn}」開頭
-- 全片用數字框架（3種方法、3個步驟、3件事）
+【Ethan 風格口條規則】
+- 開場使用：「{_hook_opener}」
+- 步驟連接詞：「{_step_conn}」開頭
+- 全片用數字框架（3種方法、3個步驟）
 - 每段結尾預告下一段（「接下來更厲害的是...」）
 - 口語化：「我們先來看」「你會發現」「很多人不知道」
-- 標題靈感參考：{title_tmpl}
+- CTA 參考：「{_cta_tmpl}」
 
 【重要限制】
 - 禁止出現任何中文人名（用「主管」「客戶」「同事」「業務」代替）
@@ -468,10 +460,10 @@ def generate_script(topic: dict) -> tuple:
 輸出 JSON：
 {{
   "title": "影片標題（25字內，含數字＋具體結果）",
-  "description": "YouTube說明欄（300字內）\n格式：\n第一行：一句話說明影片價值\n\n【影片中使用的Prompt】\nStep1 Prompt：（直接貼入step1的example_prompt）\nStep2 Prompt：（直接貼入step2的example_prompt）\nStep3 Prompt：（直接貼入step3的example_prompt）\n\n✅ 複製貼上即可使用！\n\n#AI工具 #職場效率 #Vivi AI研習社",
+  "description": "說明欄（含工具、情境、3步摘要、hashtag）",
   "tags": ["AI工具","Vivi AI研習社","職場效率"],
-  "narration_pain": "痛點旁白（18字內，說1個最痛的職場情境，精準有力，不提人名）",
-  "narration_win":  "成果旁白（18字內，說AI帶來的最大改變，有具體數字更好）",
+  "narration_pain": "痛點旁白（35字，描述3個具體職場痛點，不提人名）",
+  "narration_win":  "成果旁白（35字，說明AI帶來的3個具體改變）",
   "narration_cta":  "結尾旁白（30字，問一個問題＋邀訂閱）",
   "pain_points": ["痛點1（15字內）","痛點2（15字內）","痛點3（15字內）","痛點4（15字內）"],
   "win_points":  ["成果1（15字內）","成果2（15字內）","成果3（15字內）","成果4（15字內）"],
@@ -511,25 +503,22 @@ def generate_script(topic: dict) -> tuple:
     steps = data.get("steps",[])
     title = data.get("title", topic["title"])
     # ── Ethan 風格 description 生成 ──
-    outcomes_list = []
-    for s2 in data.get("steps", []):
-        outcomes_list.append(f"✅ {s2.get('heading','')}")
-    outcomes_str = "\n".join(outcomes_list) or "✅ 學會本集 AI 工具操作"
+    outcomes_str = "\n".join(
+        f"✅ {s2.get('heading','')}" for s2 in data.get("steps",[])
+    ) or "✅ 學會本集 AI 工具操作"
 
-    # 時間戳（簡易估算）
-    ts = ["00:00 開場：你能學到什麼"]
-    t = 7
-    for s2 in data.get("steps", []):
-        ts.append(f"{t//60:02d}:{t%60:02d} Step {s2.get('num','?')}：{s2.get('heading','')}")
-        t += 14
-    ts.append(f"{t//60:02d}:{t%60:02d} Prompt 總覽（可截圖套用）")
-    ts.append(f"{t+7//60:02d}:{(t+7)%60:02d} 訂閱＆留言")
-    timestamps_str = "\n".join(ts)
+    ts_list = ["00:00 開場：你能學到什麼"]
+    _t = 7
+    for s2 in data.get("steps",[]):
+        ts_list.append(f"{_t//60:02d}:{_t%60:02d} Step {s2.get('num','')}：{s2.get('heading','')}")
+        _t += 14
+    ts_list.append(f"{_t//60:02d}:{_t%60:02d} Prompt 總覽（截圖直接用）")
+    ts_list.append(f"{(_t+7)//60:02d}:{(_t+7)%60:02d} 訂閱＆留言")
+    timestamps_str = "\n".join(ts_list)
 
-    # Prompt 區塊
     prompt_lines = []
-    for s2 in data.get("steps", []):
-        ep = s2.get("example_prompt", "").strip()
+    for s2 in data.get("steps",[]):
+        ep = s2.get("example_prompt","").strip()
         if ep:
             prompt_lines.append(f"📌 Step {s2.get('num')}：{s2.get('heading','')}\n{ep}")
     prompts_str = "\n\n".join(prompt_lines)
@@ -730,107 +719,71 @@ def main():
     # ══ 四項內容產出（視覺概念 / 影片規劃 / 社群文案 / 30天計畫）══
     print("\n🎨 產出視覺圖文設計概念...")
     visual_concept = _gemini_json(f"""
-你是台灣品牌視覺設計師。根據以下高分選題，產出一個現代精緻的視覺圖文設計概念。
+你是台灣品牌視覺設計師。根據高分選題，產出現代精緻的視覺圖文設計概念。
 選題：{best['title']}  工具：{best.get('tool','')}
 
-請定義（JSON格式）：
+輸出 JSON：
 {{
   "main_title": "主標題（15字內，強調痛點或結果）",
   "sub_text": "輔助文字（20字內，說明方法或工具）",
-  "layout": "版面架構（例：左文右圖三欄式 / 全幅底圖浮字卡 / 上下分割對比）",
-  "spacing": "元素間距建議（例：標題四周留白40px，段落間距32px）",
-  "style": "視覺風格（例：深藍白金商務感 / 清新青綠漸層 / 暖橙動態感）",
-  "hook_layout_id": 從0到9選一個最適合此選題的版型編號,
-  "color_mood": "色調情緒（例：專業信任感 / 輕鬆效率感 / 緊迫行動感）"
-}}
-""")
+  "layout": "版面架構（例：左文右圖三欄式 / 全幅底圖浮字卡）",
+  "style": "視覺風格（例：深藍白金商務感 / 清新青綠漸層）",
+  "hook_layout_id": 從0到9選最適合此選題的版型編號,
+  "color_mood": "色調情緒"
+}}""")
 
     print("\n🎬 產出影片剪輯規劃...")
     video_plan = _gemini_json(f"""
-你是短影音剪輯導演。將以下選題轉換成15-30秒的短影音剪輯規劃。
-選題：{best['title']}  工具：{best.get('tool','')}
+你是短影音剪輯導演。將以下選題轉換成15-30秒短影音剪輯規劃。
+選題：{best['title']}
 
-請逐鏡頭說明（JSON格式）：
-{{
-  "total_duration": "總長度（秒）",
-  "shots": [
-    {{
-      "shot": 1,
-      "content": "畫面內容描述",
-      "duration": "秒數",
-      "transition": "轉場方式（例：硬切/淡入/滑入）",
-      "subtitle": "字幕文字設計（字型大小/顏色/位置）",
-      "rhythm": "節奏感受（快速衝擊/緩慢呼吸/中等穩健）",
-      "elements": "畫面元素安排（例：左三分之一文字 右照片 底部進度條）"
-    }}
-  ]
-}}
-""", array=False)
+輸出 JSON：
+{{"total_duration":"秒數","shots":[{{"shot":1,"content":"畫面內容","duration":"秒","transition":"轉場","subtitle":"字幕設計","rhythm":"節奏","elements":"元素安排"}}]}}""")
 
     print("\n📱 產出社群文案...")
     social_copy = _gemini_json(f"""
-你是台灣社群內容行銷專家。為以下選題撰寫優化後的社群文案。
+你是台灣社群行銷專家。為以下選題撰寫社群文案（仿學長Ethan風格，口語溫暖）。
 選題：{best['title']}  工具：{best.get('tool','')}
-語氣風格：專業溫暖親切
 
-請輸出（JSON格式）：
+輸出 JSON：
 {{
-  "hook": "開頭Hook（前兩行一定要讓人想繼續看，20字內）",
-  "body": "主要內容段落（說明方法/效果/場景，100字內）",
-  "cta": "行動呼籲（引導留言/訂閱/分享，20字內）",
-  "hashtags": ["#AI工具","#職場效率","#Vivi AI研習社","（再加5個相關標籤）"],
-  "ig_caption": "完整IG文案（hook+body+cta+hashtags合併，繁體中文）",
-  "linkedin_caption": "LinkedIn版文案（稍正式，200字內）"
-}}
-""")
+  "hook": "開頭Hook（20字內，讓人停止滑動）",
+  "body": "主要內容（100字內）",
+  "cta": "行動呼籲（20字內）",
+  "hashtags": ["#AI工具","#職場效率","#ViviAI研習社","#台灣AI","#上班族必學","#ChatGPT","#AI教學"],
+  "ig_caption": "完整IG文案（hook+body+cta+hashtags）"
+}}""")
 
     print("\n📅 產出30天發文計畫...")
     plan_30 = _gemini_json(f"""
-你是台灣 AI 教學頻道「Vivi AI研習社」的內容策略師。
-以「{best['title']}」為本週主題，建立一份完整的30天發文計畫。
+你是「Vivi AI研習社」內容策略師，目標受眾為台灣非技術背景上班族。
+以「{best['title']}」為本週主題，建立30天發文計畫，考量：穩定發布、互動率、多樣性。
 
-優先考慮：內容穩定發布、受眾互動率、內容多樣性。
-目標受眾：台灣非技術背景上班族（PM、業務、行政、主管）
+輸出 JSON 陣列（30筆）：
+[{{"day":1,"type":"內容形式","topic":"當天主題（15字內）","visual_hint":"視覺設計提示","video_direction":"剪輯方向","copy_hint":"文案提示","post_time":"07:30","platform":"YouTube/IG/LinkedIn"}}]""", array=True)
 
-請輸出 JSON 陣列（30筆）：
-[{{
-  "day": 1,
-  "type": "內容形式（例：教學短影片/知識圖卡/問答互動/幕後花絮/使用者見證）",
-  "topic": "當天主題（15字內）",
-  "visual_hint": "視覺設計提示（20字內）",
-  "video_direction": "影片或剪輯方向（20字內）",
-  "copy_hint": "文案撰寫提示（20字內）",
-  "post_time": "建議發文時間（例：07:30/12:00/20:00）",
-  "platform": "主要平台（YouTube/IG/LinkedIn）"
-}}]
-""", array=True)
+    # 儲存四項產出
+    content_meta = {
+        "topic": best, "visual_concept": visual_concept,
+        "video_plan": video_plan, "social_copy": social_copy,
+        "plan_30": plan_30, "generated_at": datetime.datetime.now().isoformat()
+    }
+    with open("content_meta.json","w",encoding="utf-8") as _f:
+        json.dump(content_meta, _f, ensure_ascii=False, indent=2)
+    print("  💾 四項內容已儲存至 content_meta.json")
 
-    # 儲存四項產出到 meta JSON
-    content_meta = {{
-        "topic": best,
-        "visual_concept": visual_concept,
-        "video_plan": video_plan,
-        "social_copy": social_copy,
-        "plan_30": plan_30,
-        "generated_at": datetime.datetime.now().isoformat()
-    }}
-    with open("content_meta.json", "w", encoding="utf-8") as f:
-        json.dump(content_meta, f, ensure_ascii=False, indent=2)
-    print(f"  💾 四項內容已儲存至 content_meta.json")
+    # 視覺概念決定 hook 版型
+    if isinstance(visual_concept, dict):
+        _lid = visual_concept.get("hook_layout_id")
+        if isinstance(_lid, int):
+            os.environ["HOOK_LAYOUT_OVERRIDE"] = str(_lid)
+            print(f"  🎨 版型建議 #{_lid}（{visual_concept.get('style','')}）")
 
-    # 用視覺概念決定 hook layout（如果有）
-    if visual_concept and isinstance(visual_concept, dict):
-        layout_hint = visual_concept.get("hook_layout_id")
-        if isinstance(layout_hint, int):
-            os.environ["HOOK_LAYOUT_OVERRIDE"] = str(layout_hint)
-            print(f"  🎨 視覺概念建議版型：#{layout_hint} ({visual_concept.get('style','')})")
-
-    # 把 Gemini 社群文案的 hashtag 補入（避免重複）
-    if social_copy and isinstance(social_copy, dict):
-        extra_tags = " ".join(social_copy.get("hashtags", []))
-        if extra_tags:
-            description = description + f"\n{extra_tags}"
-    print(f"  📋 YouTube Description ({len(description)}字) 已套用 Ethan 風格")
+    # 把 IG 文案 hashtag 補入 description
+    if isinstance(social_copy, dict):
+        extra = " ".join(social_copy.get("hashtags", []))
+        if extra:
+            description = description + f"\n{extra}"
 
     seg_files = generate_voice_segments(narrations)
 

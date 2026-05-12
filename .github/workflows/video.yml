@@ -70,4 +70,5 @@ jobs:
             video_final.mp4
             video_meta.json
             content_meta.json
+            content_meta.json
           retention-days: 14
